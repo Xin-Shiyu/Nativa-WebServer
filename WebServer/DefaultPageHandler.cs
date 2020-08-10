@@ -13,6 +13,10 @@ namespace WebServer
         {
             HttpHelper.Response res = new HttpHelper.Response();
             string actualPath = GetActualPath(URI);
+            if (Directory.Exists(actualPath) && !File.Exists(actualPath))
+            {
+                actualPath = Path.Combine(actualPath, DefaultPage);
+            }
             string contentType = GetContentType(actualPath);
 
             res.StatusCode = File.Exists(actualPath) ? 200 : throw new FileNotFoundException();
@@ -44,16 +48,15 @@ namespace WebServer
 
         public DefaultPageHandler(string physicalBasePath)
         {
+            if (!Directory.Exists(physicalBasePath))
+            {
+                Directory.CreateDirectory(physicalBasePath);
+            }
             PhysicalBasePath = physicalBasePath;
         }
 
         private string GetActualPath(string URI)
         {
-            if (URI == "/")
-            {
-                URI = DefaultPage;
-            }
-
             int i = 0;
             for (; i < URI.Length; ++i)
             {

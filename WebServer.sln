@@ -3,9 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30225.117
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebServer", "WebServer\WebServer.csproj", "{1A8056F2-7338-4D8D-8471-9931D7DF8654}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WebServer", "WebServer\WebServer.csproj", "{1A8056F2-7338-4D8D-8471-9931D7DF8654}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Logger", "Logger\Logger.csproj", "{D65E2759-B061-417D-BC77-5BE1BEA428A0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Logger", "Logger\Logger.csproj", "{D65E2759-B061-417D-BC77-5BE1BEA428A0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IniHandler", "IniHandler\IniHandler.csproj", "{03076B27-A628-4E3C-A35F-F99BFEB9D9E7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{D65E2759-B061-417D-BC77-5BE1BEA428A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D65E2759-B061-417D-BC77-5BE1BEA428A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D65E2759-B061-417D-BC77-5BE1BEA428A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{03076B27-A628-4E3C-A35F-F99BFEB9D9E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{03076B27-A628-4E3C-A35F-F99BFEB9D9E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{03076B27-A628-4E3C-A35F-F99BFEB9D9E7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{03076B27-A628-4E3C-A35F-F99BFEB9D9E7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

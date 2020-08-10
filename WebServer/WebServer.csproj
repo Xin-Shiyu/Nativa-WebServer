@@ -6,6 +6,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\IniHandler\IniHandler.csproj" />
     <ProjectReference Include="..\Logger\Logger.csproj" />
   </ItemGroup>
 

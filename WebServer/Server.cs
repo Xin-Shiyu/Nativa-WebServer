@@ -16,15 +16,10 @@ namespace WebServer
         private readonly IPageHandler handler;
         private readonly int port;
         private TcpListener listener;
-        private readonly int minSizeForCompress = 1048576;
-        private readonly int keepAliveWaitTime = 800;
+        private readonly int compressMinSize;
+        private readonly int keepAliveMaxDelay;
         private readonly Logger logger;
         //private bool isRunning;
-
-        public Server(IPageHandler handler)
-        {
-            this.handler = handler;
-        }
 
         public void Run()
         {
@@ -53,7 +48,7 @@ namespace WebServer
                 int numberOfBytesRead;
 
                 sw.Start();
-                while (sw.ElapsedMilliseconds < keepAliveWaitTime) //等待一定时长
+                while (sw.ElapsedMilliseconds < keepAliveMaxDelay) //等待一定时长
                 {
                     if (stream.DataAvailable)
                     {
@@ -82,7 +77,14 @@ namespace WebServer
                     {
                         keepAlive = true;
                     }
-                    logger.Log(string.Format("{0} {1} {2}", request.Type, request.URL, request.Headers?["User-Agent"]));
+                    logger.Log(
+                        string.Format(
+                            "{0} {1} {2} {3}",
+                            client.Client.RemoteEndPoint,
+                            request.Type,
+                            request.URL,
+                            request.Headers?["User-Agent"]
+                            ));
                     response = request.Type switch
                     {
                         HttpHelper.RequestType.GET => handler.GetPage(request.URL),
@@ -114,7 +116,7 @@ namespace WebServer
                 {
                     if (response.Headers != null)
                     {
-                        if (doCompress && response.Body.Length > minSizeForCompress)
+                        if (doCompress && response.Body.Length > compressMinSize)
                         {
                             using MemoryStream compressStream = new MemoryStream();
                             using (GZipStream zipStream = new GZipStream(compressStream, CompressionMode.Compress))
@@ -184,22 +186,21 @@ namespace WebServer
                 furtherInformation);
         }
 
-        public Server(int port = 80, IPageHandler handler = null)
+        public Server(int port, int compressMinSize, int keepAliveMaxDelay, string logSaveLocation, IPageHandler handler)
         {
-            logger = new Logger();
+            logger = new Logger(logSaveLocation, true);
             logger.Log(string.Format("Nativa WebServer 创建了一个新实例，使用端口 {0}", port));
-            if (handler == null)
-            {
-                string webRoot = Path.Combine(AppContext.BaseDirectory, "WebRoot");
-                if (!Directory.Exists(webRoot))
-                {
-                    Directory.CreateDirectory(webRoot);
-                    logger.Log(string.Format("未指定网站物理路径，已经创建了新的路径，位于 {0}", webRoot));
-                }
-                this.handler = new DefaultPageHandler(webRoot);
-                logger.Log("未指定页面处理模块，使用默认。");
-            }
             this.port = port;
+            this.compressMinSize = compressMinSize;
+            this.keepAliveMaxDelay = keepAliveMaxDelay;
+            this.handler = handler;
+            AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
+        }
+
+        private void CurrentDomain_ProcessExit(object sender, EventArgs e)
+        {
+            logger.Log("进程被终结");
+            logger.ForceSave();
         }
     }
 }
