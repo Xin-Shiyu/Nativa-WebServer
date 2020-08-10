@@ -1,0 +1,16 @@
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\bin\Release\netcoreapp3.1\WebServer.exe
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\bin\Release\netcoreapp3.1\WebServer.deps.json
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\bin\Release\netcoreapp3.1\WebServer.runtimeconfig.json
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\bin\Release\netcoreapp3.1\WebServer.runtimeconfig.dev.json
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\bin\Release\netcoreapp3.1\WebServer.dll
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\bin\Release\netcoreapp3.1\WebServer.pdb
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\bin\Release\netcoreapp3.1\Logger.dll
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\bin\Release\netcoreapp3.1\Logger.pdb
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\obj\Release\netcoreapp3.1\WebServer.csprojAssemblyReference.cache
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\obj\Release\netcoreapp3.1\WebServer.AssemblyInfoInputs.cache
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\obj\Release\netcoreapp3.1\WebServer.AssemblyInfo.cs
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\obj\Release\netcoreapp3.1\WebServer.csproj.CoreCompileInputs.cache
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\obj\Release\netcoreapp3.1\WebServer.csproj.CopyComplete
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\obj\Release\netcoreapp3.1\WebServer.dll
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\obj\Release\netcoreapp3.1\WebServer.pdb
+C:\Users\Xin Shiyu\source\repos\WebServer\WebServer\obj\Release\netcoreapp3.1\WebServer.genruntimeconfig.cache

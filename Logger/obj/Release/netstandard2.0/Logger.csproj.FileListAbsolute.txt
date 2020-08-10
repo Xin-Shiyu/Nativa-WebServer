@@ -1,0 +1,9 @@
+C:\Users\Xin Shiyu\source\repos\WebServer\Logger\bin\Release\netstandard2.0\Logger.deps.json
+C:\Users\Xin Shiyu\source\repos\WebServer\Logger\bin\Release\netstandard2.0\Logger.dll
+C:\Users\Xin Shiyu\source\repos\WebServer\Logger\bin\Release\netstandard2.0\Logger.pdb
+C:\Users\Xin Shiyu\source\repos\WebServer\Logger\obj\Release\netstandard2.0\Logger.csprojAssemblyReference.cache
+C:\Users\Xin Shiyu\source\repos\WebServer\Logger\obj\Release\netstandard2.0\Logger.AssemblyInfoInputs.cache
+C:\Users\Xin Shiyu\source\repos\WebServer\Logger\obj\Release\netstandard2.0\Logger.AssemblyInfo.cs
+C:\Users\Xin Shiyu\source\repos\WebServer\Logger\obj\Release\netstandard2.0\Logger.csproj.CoreCompileInputs.cache
+C:\Users\Xin Shiyu\source\repos\WebServer\Logger\obj\Release\netstandard2.0\Logger.dll
+C:\Users\Xin Shiyu\source\repos\WebServer\Logger\obj\Release\netstandard2.0\Logger.pdb
