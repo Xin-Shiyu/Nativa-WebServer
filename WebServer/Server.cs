@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace WebServer
@@ -50,6 +51,7 @@ namespace WebServer
                 sw.Start();
                 while (sw.ElapsedMilliseconds < settings.keepAliveMaxDelay) //等待一定时长
                 {
+                    Thread.Sleep(10);
                     if (stream.DataAvailable)
                     {
                         break; //若请求来了则停止等待
