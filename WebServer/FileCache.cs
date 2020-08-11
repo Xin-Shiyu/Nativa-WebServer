@@ -57,7 +57,6 @@ namespace WebServer
             var killList = new List<string>();
             foreach (var pair in lifeDict)
             {
-                logger.Log(string.Format("寿命 {0} {1}", pair.Key, pair.Value));
                 if (pair.Value == 0)
                 {
                     killList.Add(pair.Key);

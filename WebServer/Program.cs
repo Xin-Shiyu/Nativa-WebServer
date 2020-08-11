@@ -36,9 +36,17 @@ namespace WebServer
                     { "second_gen_life_growth", "4" },
                     { "third_gen_life_growth", "8" }
                 });
+            iniFile.SetDefault(
+                "global",
+                new Dictionary<string, string>
+                {
+                    { "show_log_on_screen", "true" }
+                });
             iniFile.Save();
 
-            var logger = new Logger(Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["log_save_location"]), true);
+            var logger = new Logger(
+                Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["log_save_location"]),
+                bool.Parse(iniFile.Sections["global"]["show_log_on_screen"]));
             Server server = new Server(
                 new ServerSettings
                 {
@@ -49,7 +57,7 @@ namespace WebServer
                 },
                 logger,
                 handler: new DefaultPageHandler(
-                    iniFile.Sections["nws"]["root"], logger,
+                    Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["root"]), logger,
                     new FileCacheSettings
                     {
                         cacheClearingInterval = int.Parse(iniFile.Sections["dph_file_cache"]["cache_clearing_interval"]),
