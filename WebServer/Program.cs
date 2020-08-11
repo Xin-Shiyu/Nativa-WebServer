@@ -15,18 +15,19 @@ namespace WebServer
             if (!iniFile.Sections.ContainsKey("nws"))
             {
                 Console.WriteLine("未能找到配置文件 config.ini 或配置文件为空，创建默认配置。");
-                iniFile.Sections.Add(
-                    "nws",
-                    new Dictionary<string, string>
-                    {
-                        { "port", "80" },
-                        { "root", "WebRoot" },
-                        { "keep_alive_max_delay", "800" },
-                        { "compress_min_size", "1048576" },
-                        { "log_save_location", "log" },
-                    });
-                iniFile.Save();
+                iniFile.Sections.Add("nws", new Dictionary<string, string>());
             }
+            iniFile.SetDefault(
+                "nws",
+                new Dictionary<string, string>
+                {
+                    { "port", "80" },
+                    { "root", "WebRoot" },
+                    { "keep_alive_max_delay", "800" },
+                    { "compress_min_size", "1048576" },
+                    { "log_save_location", "log" }
+                });
+            iniFile.Save();
             Server server = new Server(
                 port: int.Parse(iniFile.Sections["nws"]["port"]),
                 compressMinSize: int.Parse(iniFile.Sections["nws"]["compress_min_size"]),

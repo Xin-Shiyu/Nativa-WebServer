@@ -65,6 +65,18 @@ namespace Nativa
             myPath = path;
         }
 
+        public void SetDefault(string sectionName, Dictionary<string, string> defaultConfig)
+        {
+            var section = Sections[sectionName];
+            foreach (var pair in defaultConfig)
+            {
+                if (!section.ContainsKey(pair.Key))
+                {
+                    section.Add(pair.Key, pair.Value);
+                }
+            }
+        }
+
         public void Save()
         {
             var sb = new StringBuilder();
