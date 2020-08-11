@@ -57,7 +57,7 @@ namespace WebServer
             var killList = new List<string>();
             foreach (var pair in lifeDict)
             {
-                if (pair.Value == 0)
+                if (pair.Value <= 0)
                 {
                     killList.Add(pair.Key);
                 }
