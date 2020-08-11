@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -18,6 +19,7 @@ namespace WebServer
             {
                 actualPath = Path.Combine(actualPath, DefaultPage);
             }
+            CheckPathAccessibility(ref actualPath);
             string contentType = GetContentType(actualPath);
 
             res.StatusCode = File.Exists(actualPath) ? 200 : throw new FileNotFoundException();
@@ -67,6 +69,11 @@ namespace WebServer
                 }
             }
             return Path.Combine(PhysicalBasePath, URI[i..]);
+        }
+
+        private void CheckPathAccessibility(ref string path)
+        {
+            if (!path.Contains(PhysicalBasePath)) throw new UnauthorizedAccessException();
         }
 
         private string GetContentType(string filePath)

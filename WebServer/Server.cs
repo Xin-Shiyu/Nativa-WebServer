@@ -108,6 +108,9 @@ namespace WebServer
                         case "DirectoryNotFoundException":
                             response = CreateErrorResponse(404);
                             break;
+                        case "UnauthorizedAccessException":
+                            response = CreateErrorResponse(403);
+                            break;
                         default:
                             response = CreateErrorResponse(500, ex.Message);
                             break;

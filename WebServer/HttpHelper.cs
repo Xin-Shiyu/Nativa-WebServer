@@ -65,6 +65,7 @@ namespace WebServer
                     200 => "OK",
                     301 => "Moved Permanently",
                     404 => "Not Found",
+                    403 => "Forbidden",
                     500 => "Internal Server Error",
                     _ => ""
                 };
