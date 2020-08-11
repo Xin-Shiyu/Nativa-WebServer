@@ -14,9 +14,9 @@ namespace Nativa
             ERR,
         }
         //仿佛不是很线程安全
-        private string saveLocation;
-        private bool showOnScreen = true;
-        private StringBuilder logBuffer = new StringBuilder();
+        private readonly string saveLocation;
+        private readonly bool showOnScreen = true;
+        private readonly StringBuilder logBuffer = new StringBuilder();
 
         public void Log(string logContent)
         {

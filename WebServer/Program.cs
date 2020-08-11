@@ -9,7 +9,7 @@ namespace WebServer
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static void Main()
         {
             var iniFile = new IniFile(Path.Combine(AppContext.BaseDirectory, "config.ini"));
             if (!iniFile.Sections.ContainsKey("nws"))

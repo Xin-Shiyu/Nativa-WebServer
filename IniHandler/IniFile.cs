@@ -16,7 +16,7 @@ namespace Nativa
             }
         }
 
-        private string message = "INI 文件格式错误";
+        private readonly string message = "INI 文件格式错误";
     }
 
     public class IniFile

@@ -8,6 +8,7 @@ namespace WebServer
     {
         public string DefaultPage = "index.html";
         public readonly string PhysicalBasePath;
+        private readonly FileCache cache = new FileCache();
 
         HttpHelper.Response IPageHandler.GetPage(string URI, bool onlyHead)
         {
@@ -35,10 +36,10 @@ namespace WebServer
                     case "text/xml":
                     case "text/css":
                     case "text/javascript":
-                        res.Body = Encoding.UTF8.GetBytes(File.ReadAllText(actualPath)); //不管三七二十一先转成 UTF-8 再说
+                        res.Body = cache.ReadTextFile(actualPath);
                         break;
                     default:
-                        res.Body = File.ReadAllBytes(actualPath);
+                        res.Body = File.ReadAllBytes(actualPath); //这里先不用缓存
                         break;
                 }
             }
