@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -14,23 +15,22 @@ namespace WebServer
     internal class Server
     {
         private readonly IPageHandler handler;
-        private readonly int port;
         private TcpListener listener;
-        private readonly int compressMinSize;
-        private readonly int keepAliveMaxDelay;
         private readonly Logger logger;
+        private ServerSettings settings;
         //private bool isRunning;
 
         public void Run()
         {
-            IPAddress localAddr = IPAddress.Parse("127.0.0.1");
-            listener = new TcpListener(localAddr, port);
+            IPAddress localAddr = IPAddress.Parse("0.0.0.0"); //必须在所有地址上侦听不然只有自己可以连
+            listener = new TcpListener(localAddr, settings.port);
             //isRunning = true;
             listener.Start();
-            logger.Log(string.Format("开始在端口 {0} 上侦听", port));
+            logger.Log(string.Format("开始在端口 {0} 上侦听", settings.port));
             for (; ; )
             {
                 TcpClient client = listener.AcceptTcpClient();
+                logger.Log(client.Client.RemoteEndPoint.ToString());
                 Task.Run(() => HandleClient(client));
             }
         }
@@ -48,7 +48,7 @@ namespace WebServer
                 int numberOfBytesRead;
 
                 sw.Start();
-                while (sw.ElapsedMilliseconds < keepAliveMaxDelay) //等待一定时长
+                while (sw.ElapsedMilliseconds < settings.keepAliveMaxDelay) //等待一定时长
                 {
                     if (stream.DataAvailable)
                     {
@@ -116,7 +116,7 @@ namespace WebServer
                 {
                     if (response.Headers != null)
                     {
-                        if (doCompress && response.Body.Length > compressMinSize)
+                        if (doCompress && response.Body.Length > settings.compressMinSize)
                         {
                             using MemoryStream compressStream = new MemoryStream();
                             using (GZipStream zipStream = new GZipStream(compressStream, CompressionMode.Compress))
@@ -186,13 +186,11 @@ namespace WebServer
                 furtherInformation);
         }
 
-        public Server(int port, int compressMinSize, int keepAliveMaxDelay, string logSaveLocation, IPageHandler handler)
+        public Server(ServerSettings settings, string logSaveLocation, IPageHandler handler)
         {
             logger = new Logger(logSaveLocation, true);
-            logger.Log(string.Format("Nativa WebServer 创建了一个新实例，使用端口 {0}", port));
-            this.port = port;
-            this.compressMinSize = compressMinSize;
-            this.keepAliveMaxDelay = keepAliveMaxDelay;
+            logger.Log(string.Format("Nativa WebServer 创建了一个新实例，使用端口 {0}", settings.port));
+            this.settings = settings;
             this.handler = handler;
             AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
         }

@@ -39,7 +39,7 @@ namespace WebServer
                         res.Body = cache.ReadTextFile(actualPath);
                         break;
                     default:
-                        res.Body = File.ReadAllBytes(actualPath); //这里先不用缓存
+                        res.Body = cache.ReadFile(actualPath);
                         break;
                 }
             }

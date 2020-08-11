@@ -46,7 +46,7 @@ namespace Nativa
             {
                 Console.WriteLine(line);
             }
-            if (logBuffer.Length >= 1000)
+            if (logBuffer.Length >= 1048576)
             {
                 ForceSave();
                 logBuffer.Clear();

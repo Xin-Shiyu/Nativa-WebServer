@@ -25,15 +25,20 @@ namespace WebServer
                     { "root", "WebRoot" },
                     { "keep_alive_max_delay", "800" },
                     { "compress_min_size", "1048576" },
-                    { "log_save_location", "log" }
+                    { "log_save_location", "log" },
+                    { "aggressive_chunking", "false" }
                 });
             iniFile.Save();
             Server server = new Server(
-                port: int.Parse(iniFile.Sections["nws"]["port"]),
-                compressMinSize: int.Parse(iniFile.Sections["nws"]["compress_min_size"]),
-                keepAliveMaxDelay: int.Parse(iniFile.Sections["nws"]["compress_min_size"]),
-                handler: new DefaultPageHandler(iniFile.Sections["nws"]["root"]),
-                logSaveLocation: Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["log_save_location"])
+                new ServerSettings
+                {
+                    port = int.Parse(iniFile.Sections["nws"]["port"]),
+                    compressMinSize = int.Parse(iniFile.Sections["nws"]["compress_min_size"]),
+                    keepAliveMaxDelay = int.Parse(iniFile.Sections["nws"]["compress_min_size"]),
+                    aggressiveChunking = bool.Parse(iniFile.Sections["nws"]["aggressive_chunking"])
+                },
+                logSaveLocation: Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["log_save_location"]),
+                handler: new DefaultPageHandler(iniFile.Sections["nws"]["root"])
                 );
             server.Run();
         }
