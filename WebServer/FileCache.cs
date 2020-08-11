@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Timers;
 using System.ComponentModel;
+using Nativa;
 
 namespace WebServer
 {
@@ -17,6 +18,7 @@ namespace WebServer
         private readonly ConcurrentDictionary<string, byte[]> cache = new ConcurrentDictionary<string, byte[]>();
         private readonly ConcurrentDictionary<string, int> lifeDict = new ConcurrentDictionary<string, int>();
         private readonly Timer timer;
+        private readonly Logger logger;
 
         private void ExtendLife(string filename)
         {
@@ -39,11 +41,12 @@ namespace WebServer
             return cache[filename];
         }
 
-        public FileCache()
+        public FileCache(Logger logger)
         {
             timer = new Timer(60000); //每一分钟触发一次清理缓存
             timer.Elapsed += Timer_Elapsed;
             timer.Start();
+            this.logger = logger;
         }
 
         private void Timer_Elapsed(object sender, ElapsedEventArgs e)
@@ -65,7 +68,9 @@ namespace WebServer
                 {
                     cache.Remove(file, out _);
                     lifeDict.Remove(file, out _);
+                    logger.Log(string.Format("清理文件缓存 {0}", file));
                 });
+            GC.Collect();
         }
     }
 }

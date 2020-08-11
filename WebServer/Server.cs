@@ -191,13 +191,13 @@ namespace WebServer
                 furtherInformation);
         }
 
-        public Server(ServerSettings settings, string logSaveLocation, IPageHandler handler)
+        public Server(ServerSettings settings, Logger logger, IPageHandler handler)
         {
-            logger = new Logger(logSaveLocation, true);
-            logger.Log(string.Format("Nativa WebServer 创建了一个新实例，使用端口 {0}", settings.port));
             this.settings = settings;
             this.handler = handler;
+            this.logger = logger;
             AppDomain.CurrentDomain.ProcessExit += CurrentDomain_ProcessExit;
+            logger.Log(string.Format("Nativa WebServer 创建了一个新实例，使用端口 {0}", settings.port));
         }
 
         private void CurrentDomain_ProcessExit(object sender, EventArgs e)

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Nativa;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -9,7 +10,8 @@ namespace WebServer
     {
         public string DefaultPage = "index.html";
         public readonly string PhysicalBasePath;
-        private readonly FileCache cache = new FileCache();
+        private readonly FileCache cache;
+        private readonly Logger logger;
 
         HttpHelper.Response IPageHandler.GetPage(string URI, bool onlyHead)
         {
@@ -49,13 +51,16 @@ namespace WebServer
             return res;
         }
 
-        public DefaultPageHandler(string physicalBasePath)
+        public DefaultPageHandler(string physicalBasePath, Logger logger)
         {
             if (!Directory.Exists(physicalBasePath))
             {
                 Directory.CreateDirectory(physicalBasePath);
             }
             PhysicalBasePath = physicalBasePath;
+            this.logger = logger;
+            cache = new FileCache(logger);
+            logger.Log("使用默认页面处理模块。");
         }
 
         private string GetActualPath(string URI)
