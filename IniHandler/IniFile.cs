@@ -67,6 +67,7 @@ namespace Nativa
 
         public void SetDefault(string sectionName, Dictionary<string, string> defaultConfig)
         {
+            if (!Sections.ContainsKey(sectionName)) Sections.Add(sectionName, new Dictionary<string, string>());
             var section = Sections[sectionName];
             foreach (var pair in defaultConfig)
             {

@@ -19,12 +19,14 @@ namespace WebServer
         private readonly ConcurrentDictionary<string, int> lifeDict = new ConcurrentDictionary<string, int>();
         private readonly Timer timer;
         private readonly Logger logger;
+        private readonly FileCacheSettings settings;
 
         private void ExtendLife(string filename)
         {
-            if (!lifeDict.ContainsKey(filename)) lifeDict.TryAdd(filename, 2);
-            else if (lifeDict[filename] < 60) lifeDict[filename] += 5;
-            else if (lifeDict[filename] < 240) lifeDict[filename] += 15;
+            if (!lifeDict.ContainsKey(filename)) lifeDict.TryAdd(filename, settings.initLife);
+            else if (lifeDict[filename] < settings.firstGenLifeMax) lifeDict[filename] += settings.firstGenLifeGrowth;
+            else if (lifeDict[filename] < settings.secondGenLifeMax) lifeDict[filename] += settings.secondGenLifeGrowth;
+            else if (lifeDict[filename] < settings.thirdGenLifeMax) lifeDict[filename] += settings.thirdGenLifeGrowth;
         }
 
         public byte[] ReadFile(string filename)
@@ -41,12 +43,13 @@ namespace WebServer
             return cache[filename];
         }
 
-        public FileCache(Logger logger)
+        public FileCache(Logger logger, FileCacheSettings settings)
         {
-            timer = new Timer(60000); //每一分钟触发一次清理缓存
+            timer = new Timer(settings.cacheClearingInterval);
             timer.Elapsed += Timer_Elapsed;
             timer.Start();
             this.logger = logger;
+            this.settings = settings;
         }
 
         private void Timer_Elapsed(object sender, ElapsedEventArgs e)
@@ -54,7 +57,8 @@ namespace WebServer
             var killList = new List<string>();
             foreach (var pair in lifeDict)
             {
-                if (pair.Value == 1)
+                logger.Log(string.Format("寿命 {0} {1}", pair.Key, pair.Value));
+                if (pair.Value == 0)
                 {
                     killList.Add(pair.Key);
                 }

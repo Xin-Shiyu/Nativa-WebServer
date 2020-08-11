@@ -51,7 +51,7 @@ namespace WebServer
             return res;
         }
 
-        public DefaultPageHandler(string physicalBasePath, Logger logger)
+        public DefaultPageHandler(string physicalBasePath, Logger logger, FileCacheSettings cacheSettings)
         {
             if (!Directory.Exists(physicalBasePath))
             {
@@ -59,7 +59,7 @@ namespace WebServer
             }
             PhysicalBasePath = physicalBasePath;
             this.logger = logger;
-            cache = new FileCache(logger);
+            cache = new FileCache(logger, cacheSettings);
             logger.Log("使用默认页面处理模块。");
         }
 

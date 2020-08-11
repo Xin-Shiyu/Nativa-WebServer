@@ -12,11 +12,6 @@ namespace WebServer
         private static void Main()
         {
             var iniFile = new IniFile(Path.Combine(AppContext.BaseDirectory, "config.ini"));
-            if (!iniFile.Sections.ContainsKey("nws"))
-            {
-                Console.WriteLine("未能找到配置文件 config.ini 或配置文件为空，创建默认配置。");
-                iniFile.Sections.Add("nws", new Dictionary<string, string>());
-            }
             iniFile.SetDefault(
                 "nws",
                 new Dictionary<string, string>
@@ -28,7 +23,22 @@ namespace WebServer
                     { "log_save_location", "log" },
                     { "aggressive_chunking", "false" }
                 });
+            iniFile.SetDefault(
+                "dph_file_cache",
+                new Dictionary<string, string>
+                {
+                    { "cache_clearing_interval", "60000" },
+                    { "init_life", "2" },
+                    { "first_gen_life_max", "60" },
+                    { "second_gen_life_max", "120" },
+                    { "third_gen_life_max", "240" },
+                    { "first_gen_life_growth", "2" },
+                    { "second_gen_life_growth", "4" },
+                    { "third_gen_life_growth", "8" }
+                });
             iniFile.Save();
+
+            var logger = new Logger(Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["log_save_location"]), true);
             Server server = new Server(
                 new ServerSettings
                 {
@@ -37,8 +47,20 @@ namespace WebServer
                     keepAliveMaxDelay = int.Parse(iniFile.Sections["nws"]["compress_min_size"]),
                     aggressiveChunking = bool.Parse(iniFile.Sections["nws"]["aggressive_chunking"])
                 },
-                logSaveLocation: Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["log_save_location"]),
-                handler: new DefaultPageHandler(iniFile.Sections["nws"]["root"])
+                logger,
+                handler: new DefaultPageHandler(
+                    iniFile.Sections["nws"]["root"], logger,
+                    new FileCacheSettings
+                    {
+                        cacheClearingInterval = int.Parse(iniFile.Sections["dph_file_cache"]["cache_clearing_interval"]),
+                        initLife = int.Parse(iniFile.Sections["dph_file_cache"]["init_life"]),
+                        firstGenLifeMax = int.Parse(iniFile.Sections["dph_file_cache"]["first_gen_life_max"]),
+                        secondGenLifeMax = int.Parse(iniFile.Sections["dph_file_cache"]["second_gen_life_max"]),
+                        thirdGenLifeMax = int.Parse(iniFile.Sections["dph_file_cache"]["third_gen_life_max"]),
+                        firstGenLifeGrowth = int.Parse(iniFile.Sections["dph_file_cache"]["first_gen_life_growth"]),
+                        secondGenLifeGrowth = int.Parse(iniFile.Sections["dph_file_cache"]["second_gen_life_growth"]),
+                        thirdGenLifeGrowth = int.Parse(iniFile.Sections["dph_file_cache"]["third_gen_life_growth"])
+                    })
                 );
             server.Run();
         }
