@@ -32,7 +32,7 @@ namespace WebServer
             for (; ; )
             {
                 TcpClient client = listener.AcceptTcpClient();
-                logger.Log(client.Client.RemoteEndPoint.ToString());
+                logger.Log(string.Format("{0} 连接", client.Client.RemoteEndPoint.ToString()));
                 Task.Run(() => HandleClient(client));
             }
         }
@@ -156,7 +156,7 @@ namespace WebServer
                     break;
                 }
             }
-
+            logger.Log(string.Format("{0} 断开", client.Client.RemoteEndPoint.ToString()));
             client.Close();
         }
 

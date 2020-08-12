@@ -17,7 +17,7 @@ namespace WebServer
                 new Dictionary<string, string>
                 {
                     { "port", "80" },
-                    { "keep_alive_max_delay", "800" },
+                    { "keep_alive_max_delay", "4000" },
                     { "compress_min_size", "1048576" },
                     { "log_save_location", "log" },
                     { "aggressive_chunking", "false" }
@@ -61,7 +61,7 @@ namespace WebServer
                 {
                     port = int.Parse(iniFile.Sections["nws"]["port"]),
                     compressMinSize = int.Parse(iniFile.Sections["nws"]["compress_min_size"]),
-                    keepAliveMaxDelay = int.Parse(iniFile.Sections["nws"]["compress_min_size"]),
+                    keepAliveMaxDelay = int.Parse(iniFile.Sections["nws"]["keep_alive_max_delay"]),
                     aggressiveChunking = bool.Parse(iniFile.Sections["nws"]["aggressive_chunking"])
                 },
                 logger,
