@@ -52,6 +52,15 @@ namespace WebServer
             this.settings = settings;
         }
 
+        public int GetFileLife(string filename)
+        {
+            if (lifeDict.TryGetValue(filename, out var fileLife))
+            {
+                return fileLife * settings.cacheClearingInterval; 
+            }
+            return 0;
+        }
+
         private void Timer_Elapsed(object sender, ElapsedEventArgs e)
         {
             var killList = new List<string>();

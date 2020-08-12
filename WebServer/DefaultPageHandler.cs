@@ -28,7 +28,6 @@ namespace WebServer
             res.Headers = new Dictionary<string, string>
             {
                 { "Content-Type", contentType },
-                { "Cache-Control", "max-age=31536000" } //不知道到底应该怎么安排这个比较好，先写上试试
             };
 
             if (!onlyHead)
@@ -47,6 +46,8 @@ namespace WebServer
                         break;
                 }
             }
+
+            res.Headers.Add("Cache-Control", String.Format("max-age={0}", cache.GetFileLife(actualPath)));
 
             return res;
         }
