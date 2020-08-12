@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace WebServer
@@ -23,6 +26,7 @@ namespace WebServer
         {
             public RequestType Type;
             public string URL;
+            public Dictionary<string, string> Arguments;
             public string ProtocolVersion;
             public Dictionary<string, string> Headers;
             //public byte[] Data;
@@ -91,7 +95,17 @@ namespace WebServer
                 "PATCH" => RequestType.PATCH,
                 _ => throw new NotSupportedException("意料之外的请求类型 " + requestLine[0])
             };
-            res.URL = requestLine[1];
+            if (requestLine[1].Contains('?'))
+            {
+                res.URL = requestLine[1][..requestLine[1].IndexOf('?')];
+                res.Arguments = requestLine[1][(requestLine[1].IndexOf('?') + 1)..]
+                    .Split('&')
+                    .ToDictionary(part => DecodeURL(part[..part.IndexOf('=')]), part => DecodeURL(part[(part.IndexOf('=') + 1)..]));
+            }
+            else
+            {
+                res.URL = DecodeURL(requestLine[1]);
+            }
             res.ProtocolVersion = requestLine[2];
 
             res.Headers = new Dictionary<string, string>();
@@ -108,6 +122,42 @@ namespace WebServer
             }
 
             return res;
+        }
+
+        public static string DecodeURL(string text) //这个算法可能不是很干净，也是默认 UTF8
+        {
+            text = text.Replace('+', ' ');
+            MemoryStream stream = new MemoryStream();
+            StringBuilder sb = new StringBuilder();
+            bool inCode = false;
+            int lastRawPoint = 0;
+            for (int i = 0; i < text.Length; ++i)
+            {
+                if (text[i] == '%')
+                {
+                    if (!inCode)
+                    {
+                        sb.Append(text[lastRawPoint..i]);
+                        inCode = true;
+                    }
+                    stream.WriteByte(byte.Parse(text.Substring(i + 1, 2), System.Globalization.NumberStyles.HexNumber));
+                    i += 2;
+                }
+                else
+                {
+                    if (inCode)
+                    {
+                        lastRawPoint = i;
+                        sb.Append(Encoding.UTF8.GetString(stream.ToArray()));
+                        stream.SetLength(0); //清空字节流
+                        inCode = false;
+                    }
+                }
+            }
+            if (stream.Length != 0) sb.Append(Encoding.UTF8.GetString(stream.ToArray()));
+            else if (lastRawPoint < text.Length - 1) sb.Append(text[lastRawPoint..]);
+            stream.Dispose();
+            return sb.ToString();
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
@@ -81,11 +82,16 @@ namespace WebServer
                     }
                     logger.Log(
                         string.Format(
-                            "{0} {1} {2} {3}",
+                            "{0} {1} {2} [{3}] {4}",
                             client.Client.RemoteEndPoint,
                             request.Type,
                             request.URL,
-                            request.Headers?["User-Agent"]
+                            request.Arguments != null ?
+                            string.Join("; ",request.Arguments.ToList()) :
+                            "N/A",
+                            request.Headers.ContainsKey("User-Agent") ? 
+                            request.Headers["User-Agent"] :
+                            "N/A"
                             ));
                     response = request.Type switch
                     {
