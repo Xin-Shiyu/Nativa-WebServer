@@ -20,20 +20,23 @@ namespace WebServer
         private TcpListener listener;
         private readonly Logger logger;
         private ServerSettings settings;
-        //private bool isRunning;
 
         public void Run()
         {
             IPAddress localAddr = IPAddress.Parse("0.0.0.0"); //必须在所有地址上侦听不然只有自己可以连
             listener = new TcpListener(localAddr, settings.port);
-            //isRunning = true;
             listener.Start();
             logger.Log(string.Format("开始在端口 {0} 上侦听", settings.port));
-            for (; ; )
+            try
             {
-                TcpClient client = listener.AcceptTcpClient();
-                Task.Run(() => HandleClient(client));
+                for (; ; )
+                {
+                    TcpClient client = listener.AcceptTcpClient();
+                    Task.Run(() => HandleClient(client));
+                }
             }
+            catch (SocketException)
+            { } //退出的时候 listener.Stop() 会中断 AcceptTcpClient 的阻断过程，抛出异常，这里将其捕获
         }
 
         private void HandleClient(TcpClient client)
