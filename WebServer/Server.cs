@@ -208,6 +208,7 @@ namespace WebServer
 
         private void CurrentDomain_ProcessExit(object sender, EventArgs e)
         {
+            listener.Stop();
             logger.Log("进程被终结");
             logger.ForceSave();
         }
