@@ -14,6 +14,7 @@ namespace Nativa
         {
             INFO,
             ERR,
+            DEBUG,
         }
 
         private struct LogPiece
@@ -30,6 +31,7 @@ namespace Nativa
                         {
                             LogType.INFO => "消息",
                             LogType.ERR => "错误",
+                            LogType.DEBUG => "调试",
                             _ => "未知消息类型"
                         },
                         Message
@@ -52,6 +54,11 @@ namespace Nativa
         public void Err(string logContent)
         {
             LogWithType(logContent, LogType.ERR);
+        }
+
+        public void Dbg(string logContent)
+        {
+            LogWithType(logContent, LogType.DEBUG);
         }
 
         private void LogWithType(string logContent, LogType logType)
@@ -86,7 +93,7 @@ namespace Nativa
                         return;
                     }
                 }
-                Thread.Sleep(1000);
+                Thread.Sleep(5000);
             }
         }
 

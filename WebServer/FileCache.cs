@@ -35,6 +35,7 @@ namespace WebServer
             return cache[filename];
         }
 
+        [Obsolete]
         public byte[] ReadTextFile(string filename) //暂且重新编码为 UTF-8，权宜之计，以后再改。
         {
             while (isClearing) { }
@@ -81,7 +82,6 @@ namespace WebServer
                 {
                     cache.Remove(file, out _);
                     lifeDict.Remove(file, out _);
-                    logger.Log(string.Format("清理文件缓存 {0}", file));
                 });
             GC.Collect();
             isClearing = false;

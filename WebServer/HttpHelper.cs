@@ -37,7 +37,7 @@ namespace WebServer
             public Dictionary<string, string> Headers;
             public byte[] Body;
 
-            public byte[] ToByteArray()
+            public byte[] HeadToByteArray()
             {
                 StringBuilder sb = new StringBuilder();
                 sb.Append(string.Format(
@@ -53,12 +53,7 @@ namespace WebServer
                 }
                 sb.Append("\r\n");
 
-                byte[] head = Encoding.UTF8.GetBytes(sb.ToString());
-                byte[] res = new byte[head.Length + Body.Length];
-                head.CopyTo(res, 0);
-                Body.CopyTo(res, head.Length);
-
-                return res;
+                return Encoding.ASCII.GetBytes(sb.ToString()); //HTTP 头应该是 ASCII 编码
             }
 
             public static string GetStatusCodeName(int statusCode)

@@ -7,7 +7,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,11 +31,17 @@ namespace WebServer
                 for (; ; )
                 {
                     TcpClient client = listener.AcceptTcpClient();
-                    Task.Run(() => HandleClient(client));
+                    ThreadPool.QueueUserWorkItem(new WaitCallback(HandleClientWrapper), client); //线程池会更快一点
+                    //Task.Run(() => HandleClient(client));
                 }
             }
             catch (SocketException)
             { } //退出的时候 listener.Stop() 会中断 AcceptTcpClient 的阻断过程，抛出异常，这里将其捕获
+        }
+
+        private void HandleClientWrapper(object client)
+        {
+            HandleClient((TcpClient)client);
         }
 
         private void HandleClient(TcpClient client)
@@ -49,22 +54,32 @@ namespace WebServer
 
             for (; ; )
             {
-                byte[] buffer = new byte[256];
+                byte[] buffer = new byte[1024];
                 StringBuilder sb = new StringBuilder();
                 int numberOfBytesRead;
-
+#if DEBUG
+                logger.Dbg(string.Format("{0} 等待开始", sw.ElapsedTicks.ToString()));
+#endif
+                bool noMoreRequest = true;
                 while (sw.ElapsedMilliseconds < settings.keepAliveMaxDelay) //等待一定时长
                 {
                     if (stream.DataAvailable)
                     {
+                        noMoreRequest = false;
                         break; //若请求来了则停止等待
                     }
                 }
-                if (!stream.DataAvailable)
+#if DEBUG
+                logger.Dbg(string.Format("{0} 等待结束", sw.ElapsedTicks.ToString()));
+#endif
+                if (noMoreRequest)
                 {
                     break; //若超时则结束连接
                 }
-                
+
+#if DEBUG
+                logger.Dbg(string.Format("{0} 接受请求", sw.ElapsedTicks.ToString()));
+#endif
                 do
                 {
                     numberOfBytesRead = stream.Read(buffer, 0, buffer.Length);
@@ -72,11 +87,23 @@ namespace WebServer
                 } while (stream.DataAvailable);
                 ++requestCount;
 
+#if DEBUG
+                logger.Dbg(string.Format("{0} 接受结束", sw.ElapsedTicks.ToString()));
+#endif
+
                 bool doCompress = false;
                 HttpHelper.Response response;
                 try
                 {
+
+#if DEBUG
+                    logger.Dbg(string.Format("{0} 解析请求", sw.ElapsedTicks.ToString()));
+#endif
                     HttpHelper.Request request = HttpHelper.ParseRequest(sb.ToString());
+
+#if DEBUG
+                    logger.Dbg(string.Format("{0} 解析结束", sw.ElapsedTicks.ToString()));
+#endif
                     if (request.Headers.ContainsKey("Connection") &&
                         request.Headers["Connection"] == "keep-alive")
                     {
@@ -95,14 +122,20 @@ namespace WebServer
                             request.Headers["User-Agent"] :
                             "N/A"
                             ));
+#if DEBUG
+                    logger.Dbg(string.Format("{0} 创建响应", sw.ElapsedTicks.ToString()));
+#endif
                     response = request.Type switch
                     {
                         HttpHelper.RequestType.GET => handler.GetPage(request.URL),
                         HttpHelper.RequestType.HEAD => handler.GetPage(request.URL, onlyHead: true),
                         _ => throw new NotImplementedException(),
                     };
+#if DEBUG
+                    logger.Dbg(string.Format("{0} 创建结束", sw.ElapsedTicks.ToString()));
+#endif
                     if (request.Headers.ContainsKey("Accept-Encoding") &&
-                        request.Headers["Accept-Encoding"].Contains("gzip"))
+                        request.Headers["Accept-Encoding"].Contains("gzip") && response.Body.Length > settings.compressMinSize)
                     {
                         doCompress = true;
                     }
@@ -129,8 +162,11 @@ namespace WebServer
                 {
                     if (response.Headers != null)
                     {
-                        if (doCompress && response.Body.Length > settings.compressMinSize)
+                        if (doCompress)
                         {
+#if DEBUG
+                            logger.Dbg(string.Format("{0} 压缩开始", sw.ElapsedTicks.ToString()));
+#endif
                             using MemoryStream compressStream = new MemoryStream();
                             using (GZipStream zipStream = new GZipStream(compressStream, CompressionMode.Compress))
                             {
@@ -139,6 +175,9 @@ namespace WebServer
 
                             response.Body = compressStream.ToArray();
                             response.Headers.TryAdd("Content-Encoding", "gzip");
+#if DEBUG
+                            logger.Dbg(string.Format("{0} 压缩结束", sw.ElapsedTicks.ToString()));
+#endif
                         }
                         response.Headers.TryAdd("Content-Length", response.Body.Length.ToString()); //这是 keep-alive 模式所必需的
                         response.Headers.TryAdd("Server", "Nativa WebServer");
@@ -148,11 +187,17 @@ namespace WebServer
                             response.Headers.TryAdd("Connection", "Close");
                         }
                     }
-                    stream.Write(response.ToByteArray());
+#if DEBUG
+                    logger.Dbg(string.Format("{0} 生成并发送响应", sw.ElapsedTicks.ToString()));
+#endif
+                    stream.Write(response.HeadToByteArray());
+                    stream.Write(response.Body); //分开发送，免去拷贝
+#if DEBUG
+                    logger.Dbg(string.Format("{0} 响应完毕", sw.ElapsedTicks.ToString()));
+#endif
                     stream.Flush();
                 }
 
-                GC.Collect();
                 if (!keepAlive || requestCount >= settings.keepAliveMaxRequestCount)
                 {
                     break;
@@ -161,6 +206,7 @@ namespace WebServer
 
             sw.Stop();
             client.Close();
+            GC.Collect();
         }
 
         private static HttpHelper.Response CreateErrorResponse(int statusCode, string furtherInformation = "")

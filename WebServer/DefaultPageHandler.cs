@@ -1,9 +1,7 @@
 ﻿using Nativa;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
-using System.Text;
 
 namespace WebServer
 {
@@ -12,6 +10,19 @@ namespace WebServer
         private readonly FileCache cache;
         private readonly Logger logger;
         private readonly DefaultPageHandlerSettings settings;
+        private readonly Dictionary<string, string> contentTypeDictionary =
+            new Dictionary<string, string>
+            {
+                { "txt" , "text/plain" },
+                { "xml" , "text/xml" },
+                { "html", "text/html" },
+                { "css" , "text/css" },
+                { "js" , "text/javascript" },
+                { "png" , "image/png" },
+                { "gif" , "image/gif" },
+                { "jpg" , "image/jpeg" },
+                { "ico" , "image/x-icon" },
+            };
 
         HttpHelper.Response IPageHandler.GetPage(string URI, bool onlyHead)
         {
@@ -22,7 +33,7 @@ namespace WebServer
                 actualPath = Path.Combine(actualPath, settings.DefaultPage);
             }
             CheckPathAccessibility(ref actualPath);
-            string contentType = GetContentType(actualPath);
+            string contentType = GetContentType(ref actualPath);
 
             res.StatusCode = File.Exists(actualPath) ? 200 : throw new FileNotFoundException();
             res.Headers = new Dictionary<string, string>
@@ -32,19 +43,14 @@ namespace WebServer
 
             if (!onlyHead)
             {
-                switch (contentType)
-                {
-                    case "text/plain":
-                    case "text/html":
-                    case "text/xml":
-                    case "text/css":
-                    case "text/javascript":
-                        res.Body = cache.ReadTextFile(actualPath);
-                        break;
-                    default:
-                        res.Body = cache.ReadFile(actualPath);
-                        break;
-                }
+                //if (contentType[..5] == "text")
+                //{
+                //    res.Body = cache.ReadTextFile(actualPath);
+                //}
+                //else
+                //{
+                res.Body = cache.ReadFile(actualPath);
+                //}
             }
 
             res.Headers.Add("Cache-Control", String.Format("max-age={0}", cache.GetFileLife(actualPath)));
@@ -83,21 +89,13 @@ namespace WebServer
             if (!path.Contains(settings.PhysicalBasePath)) throw new UnauthorizedAccessException();
         }
 
-        private string GetContentType(string filePath)
+        private string GetContentType(ref string filePath)
         {
-            return filePath[(filePath.LastIndexOf('.') + 1)..].ToLower() switch
+            if (contentTypeDictionary.TryGetValue(filePath[(filePath.LastIndexOf('.') + 1)..].ToLower(), out var ret))
             {
-                "txt" => "text/plain",
-                "xml" => "text/xml",
-                "html" => "text/html",
-                "css" => "text/css",
-                "js" => "text/javascript",
-                "png" => "image/png",
-                "gif" => "image/gif",
-                "jpg" => "image/jpeg",
-                "ico" => "image/x-icon",
-                _ => "application/octet-stream"
-            };
+                return ret;
+            }
+            return "application/octet-stream";
         }
     }
 }
