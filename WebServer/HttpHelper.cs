@@ -126,6 +126,7 @@ namespace WebServer
         public static string DecodeURL(string text) //这个算法可能不是很干净，也是默认 UTF8
         {
             text = text.Replace('+', ' ');
+            if (!text.Contains('%')) return text;
             MemoryStream stream = new MemoryStream();
             StringBuilder sb = new StringBuilder();
             bool inCode = false;
