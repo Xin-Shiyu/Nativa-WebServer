@@ -155,7 +155,7 @@ namespace WebServer
                 }
             }
             if (stream.Length != 0) sb.Append(Encoding.UTF8.GetString(stream.ToArray()));
-            else if (lastRawPoint < text.Length - 1) sb.Append(text[lastRawPoint..]);
+            else sb.Append(text[lastRawPoint..]); //假如 stream 为空则最后一个片段不带 %，一定剩下了生字符串
             stream.Dispose();
             return sb.ToString();
         }

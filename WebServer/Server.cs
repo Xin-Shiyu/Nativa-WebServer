@@ -32,7 +32,6 @@ namespace WebServer
             for (; ; )
             {
                 TcpClient client = listener.AcceptTcpClient();
-                logger.Log(string.Format("{0} 连接", client.Client.RemoteEndPoint.ToString()));
                 Task.Run(() => HandleClient(client));
             }
         }
@@ -42,6 +41,8 @@ namespace WebServer
             bool keepAlive = false;
             NetworkStream stream = client.GetStream();
             Stopwatch sw = new Stopwatch();
+            sw.Start();
+            int requestCount = 0;
 
             for (; ; )
             {
@@ -49,26 +50,24 @@ namespace WebServer
                 StringBuilder sb = new StringBuilder();
                 int numberOfBytesRead;
 
-                sw.Start();
                 while (sw.ElapsedMilliseconds < settings.keepAliveMaxDelay) //等待一定时长
                 {
-                    Thread.Sleep(10);
                     if (stream.DataAvailable)
                     {
                         break; //若请求来了则停止等待
                     }
                 }
-                sw.Stop();
                 if (!stream.DataAvailable)
                 {
                     break; //若超时则结束连接
                 }
-
+                
                 do
                 {
                     numberOfBytesRead = stream.Read(buffer, 0, buffer.Length);
                     sb.Append(Encoding.ASCII.GetString(buffer, 0, numberOfBytesRead));
                 } while (stream.DataAvailable);
+                ++requestCount;
 
                 bool doCompress = false;
                 HttpHelper.Response response;
@@ -151,12 +150,13 @@ namespace WebServer
                 }
 
                 GC.Collect();
-                if (!keepAlive)
+                if (!keepAlive || requestCount >= settings.keepAliveMaxRequestCount)
                 {
                     break;
                 }
             }
-            logger.Log(string.Format("{0} 断开", client.Client.RemoteEndPoint.ToString()));
+
+            sw.Stop();
             client.Close();
         }
 

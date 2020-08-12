@@ -18,6 +18,7 @@ namespace WebServer
                 {
                     { "port", "80" },
                     { "keep_alive_max_delay", "4000" },
+                    { "keep_alive_max_request_count", "100" },
                     { "compress_min_size", "1048576" },
                     { "log_save_location", "log" },
                     { "aggressive_chunking", "false" }
@@ -62,6 +63,7 @@ namespace WebServer
                     port = int.Parse(iniFile.Sections["nws"]["port"]),
                     compressMinSize = int.Parse(iniFile.Sections["nws"]["compress_min_size"]),
                     keepAliveMaxDelay = int.Parse(iniFile.Sections["nws"]["keep_alive_max_delay"]),
+                    keepAliveMaxRequestCount = int.Parse(iniFile.Sections["nws"]["keep_alive_max_request_count"]),
                     aggressiveChunking = bool.Parse(iniFile.Sections["nws"]["aggressive_chunking"])
                 },
                 logger,
