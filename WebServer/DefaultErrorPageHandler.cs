@@ -1,12 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Text;
 
 namespace WebServer
 {
     class DefaultErrorPageHandler : IErrorPageHandler
     {
+        private ConcurrentDictionary<WebException, HttpHelper.Response> miniPageCache = new ConcurrentDictionary<WebException, HttpHelper.Response>();
         HttpHelper.Response IErrorPageHandler.GetPage(WebException exception)
+        {
+            if (!miniPageCache.TryGetValue(exception, out HttpHelper.Response page))
+            {
+                page = CreateErrorResponse(exception);
+                miniPageCache.TryAdd(exception, page);
+            }
+            if (miniPageCache.Count > 10) miniPageCache.Clear();
+            return page;
+        }
+
+        private static HttpHelper.Response CreateErrorResponse(WebException exception)
         {
             return new HttpHelper.Response
             {

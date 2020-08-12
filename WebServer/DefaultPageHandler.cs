@@ -35,7 +35,7 @@ namespace WebServer
             CheckPathAccessibility(ref actualPath);
             string contentType = GetContentType(ref actualPath);
 
-            res.StatusCode = File.Exists(actualPath) ? 200 : throw new WebException(404);
+            res.StatusCode = File.Exists(actualPath) ? 200 : throw WebException.GetException(404);
             res.Headers = new Dictionary<string, string>
             {
                 { HeaderStrings.ContentType , contentType },
@@ -86,7 +86,7 @@ namespace WebServer
 
         private void CheckPathAccessibility(ref string path)
         {
-            if (!path.Contains(settings.PhysicalBasePath)) throw new WebException(403);
+            if (!path.Contains(settings.PhysicalBasePath)) throw WebException.GetException(403);
         }
 
         private string GetContentType(ref string filePath)

@@ -185,8 +185,15 @@ namespace WebServer
 #if DEBUG
                     logger.Dbg(string.Format("{0} 生成并发送响应", sw.ElapsedTicks.ToString()));
 #endif
-                    stream.Write(response.HeadToByteArray());
-                    stream.Write(response.Body); //分开发送，免去拷贝
+                    try
+                    {
+                        stream.Write(response.HeadToByteArray());
+                        stream.Write(response.Body); //分开发送，免去拷贝
+                    }
+                    catch (IOException ex)
+                    {
+                        logger.Err(ex.ToString());
+                    }
 #if DEBUG
                     logger.Dbg(string.Format("{0} 响应完毕", sw.ElapsedTicks.ToString()));
 #endif
