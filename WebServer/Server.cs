@@ -16,6 +16,7 @@ namespace WebServer
     internal class Server
     {
         private readonly IPageHandler handler;
+        private readonly IErrorPageHandler errorPageHandler = new DefaultErrorPageHandler();
         private TcpListener listener;
         private readonly Logger logger;
         private ServerSettings settings;
@@ -104,8 +105,8 @@ namespace WebServer
 #if DEBUG
                     logger.Dbg(string.Format("{0} 解析结束", sw.ElapsedTicks.ToString()));
 #endif
-                    if (request.Headers.ContainsKey("Connection") &&
-                        request.Headers["Connection"] == "keep-alive")
+                    if (request.Headers.ContainsKey(HeaderStrings.Connection) &&
+                        request.Headers[HeaderStrings.Connection] == "keep-alive")
                     {
                         keepAlive = true;
                     }
@@ -116,10 +117,10 @@ namespace WebServer
                             request.Type,
                             request.URL,
                             request.Arguments != null ?
-                            string.Join("; ",request.Arguments.ToList()) :
+                            string.Join("; ", request.Arguments.ToList()) :
                             "N/A",
-                            request.Headers.ContainsKey("User-Agent") ? 
-                            request.Headers["User-Agent"] :
+                            request.Headers.ContainsKey(HeaderStrings.UserAgent) ?
+                            request.Headers[HeaderStrings.UserAgent] :
                             "N/A"
                             ));
 #if DEBUG
@@ -134,28 +135,22 @@ namespace WebServer
 #if DEBUG
                     logger.Dbg(string.Format("{0} 创建结束", sw.ElapsedTicks.ToString()));
 #endif
-                    if (request.Headers.ContainsKey("Accept-Encoding") &&
-                        request.Headers["Accept-Encoding"].Contains("gzip") && response.Body.Length > settings.compressMinSize)
+                    if (request.Headers.ContainsKey(HeaderStrings.AcceptEncoding) &&
+                        request.Headers[HeaderStrings.AcceptEncoding].Contains(HeaderStrings.Gzip) &&
+                        response.Body.Length > settings.compressMinSize)
                     {
                         doCompress = true;
                     }
                 }
+                catch (WebException ex)
+                {
+                    logger.Err(ex.ToString());
+                    response = errorPageHandler.GetPage(ex);
+                }
                 catch (Exception ex)
                 {
                     logger.Err(ex.ToString());
-                    switch (ex.GetType().Name)
-                    {
-                        case "FileNotFoundException":
-                        case "DirectoryNotFoundException":
-                            response = CreateErrorResponse(404);
-                            break;
-                        case "UnauthorizedAccessException":
-                            response = CreateErrorResponse(403);
-                            break;
-                        default:
-                            response = CreateErrorResponse(500, ex.Message);
-                            break;
-                    }
+                    response = errorPageHandler.GetPage(new WebException(500, ex));
                 }
 
                 if (response != null)
@@ -174,17 +169,17 @@ namespace WebServer
                             }
 
                             response.Body = compressStream.ToArray();
-                            response.Headers.TryAdd("Content-Encoding", "gzip");
+                            response.Headers.TryAdd(HeaderStrings.ContentEncoding, HeaderStrings.Gzip);
 #if DEBUG
                             logger.Dbg(string.Format("{0} 压缩结束", sw.ElapsedTicks.ToString()));
 #endif
                         }
-                        response.Headers.TryAdd("Content-Length", response.Body.Length.ToString()); //这是 keep-alive 模式所必需的
-                        response.Headers.TryAdd("Server", "Nativa WebServer");
-                        response.Headers.TryAdd("Date", DateTime.Now.ToString());
+                        response.Headers.TryAdd(HeaderStrings.ContentLength, response.Body.Length.ToString()); //这是 keep-alive 模式所必需的
+                        response.Headers.TryAdd(HeaderStrings.Server, "Nativa WebServer");
+                        response.Headers.TryAdd(HeaderStrings.Date, DateTime.Now.ToString());
                         if (!keepAlive)
                         {
-                            response.Headers.TryAdd("Connection", "Close");
+                            response.Headers.TryAdd(HeaderStrings.Connection, HeaderStrings.Close);
                         }
                     }
 #if DEBUG
@@ -207,43 +202,6 @@ namespace WebServer
             sw.Stop();
             client.Close();
             GC.Collect();
-        }
-
-        private static HttpHelper.Response CreateErrorResponse(int statusCode, string furtherInformation = "")
-        {
-            return new HttpHelper.Response
-            {
-                StatusCode = statusCode,
-                Headers = new Dictionary<string, string>
-                            {
-                                { "Content-Type", "text/html" }
-                            },
-                Body = Encoding.UTF8.GetBytes(
-                               CreateErrorPage(
-                                   string.Format(
-                                       "{0} {1}",
-                                       statusCode,
-                                       HttpHelper.Response.GetStatusCodeName(statusCode)),
-                                   furtherInformation))
-            };
-        }
-
-        private static string CreateErrorPage(string errorType, string furtherInformation)
-        {
-            return string.Format(
-                "<html>" +
-                    "<head><title>{0}</title></head>" +
-                    "<body>" +
-                        "<center>" +
-                            "<h1>{0}</h1>" +
-                            "<hr/>" +
-                            "<p>Nativa WebServer</p>" +
-                            "<pre>{1}</pre>" +
-                        "</center>" +
-                    "</body>" +
-                "</html>",
-                errorType,
-                furtherInformation);
         }
 
         public Server(ServerSettings settings, Logger logger, IPageHandler handler)

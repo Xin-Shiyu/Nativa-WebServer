@@ -35,10 +35,10 @@ namespace WebServer
             CheckPathAccessibility(ref actualPath);
             string contentType = GetContentType(ref actualPath);
 
-            res.StatusCode = File.Exists(actualPath) ? 200 : throw new FileNotFoundException();
+            res.StatusCode = File.Exists(actualPath) ? 200 : throw new WebException(404);
             res.Headers = new Dictionary<string, string>
             {
-                { "Content-Type", contentType },
+                { HeaderStrings.ContentType , contentType },
             };
 
             if (!onlyHead)
@@ -53,7 +53,7 @@ namespace WebServer
                 //}
             }
 
-            res.Headers.Add("Cache-Control", String.Format("max-age={0}", cache.GetFileLife(actualPath)));
+            res.Headers.Add(HeaderStrings.CacheControl, String.Format("max-age={0}", cache.GetFileLife(actualPath)));
 
             return res;
         }
@@ -86,7 +86,7 @@ namespace WebServer
 
         private void CheckPathAccessibility(ref string path)
         {
-            if (!path.Contains(settings.PhysicalBasePath)) throw new UnauthorizedAccessException();
+            if (!path.Contains(settings.PhysicalBasePath)) throw new WebException(403);
         }
 
         private string GetContentType(ref string filePath)

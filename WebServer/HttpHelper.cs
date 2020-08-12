@@ -6,6 +6,21 @@ using System.Text;
 
 namespace WebServer
 {
+    static class HeaderStrings
+    {
+        internal const string CacheControl = "Cache-Control";
+        internal const string ContentType = "Content-Type";
+        internal const string Connection = "Connection";
+        internal const string UserAgent = "User-Agent";
+        internal const string AcceptEncoding = "Accept-Encoding";
+        internal const string Gzip = "gzip";
+        internal const string ContentEncoding = "Content-Encoding";
+        internal const string ContentLength = "Content-Length";
+        internal const string Server = "Server";
+        internal const string Date = "Date";
+        internal const string Close = "Close";
+    }
+
     internal class HttpHelper
     {
         public enum RequestType
