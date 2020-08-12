@@ -17,12 +17,20 @@ namespace WebServer
                 new Dictionary<string, string>
                 {
                     { "port", "80" },
-                    { "root", "WebRoot" },
                     { "keep_alive_max_delay", "800" },
                     { "compress_min_size", "1048576" },
                     { "log_save_location", "log" },
                     { "aggressive_chunking", "false" }
                 });
+            iniFile.SetDefault(
+                "dph",
+                new Dictionary<string, string>
+                {
+                    { "physical_base_path", iniFile.Sections["nws"].ContainsKey("root") ? iniFile.Sections["nws"]["root"] : "webroot"},
+                    //对于旧的配置的兼容性措施
+                    { "default_page", "index.html" }
+                });
+            if (iniFile.Sections["nws"].ContainsKey("root")) iniFile.Sections["nws"].Remove("root"); //兼容完了还是要升级的，不能留着误会
             iniFile.SetDefault(
                 "dph_file_cache",
                 new Dictionary<string, string>
@@ -43,6 +51,7 @@ namespace WebServer
                     { "show_log_on_screen", "true" }
                 });
             iniFile.Save();
+            GC.Collect(); //轻装上阵
 
             var logger = new Logger(
                 Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["log_save_location"]),
@@ -57,7 +66,12 @@ namespace WebServer
                 },
                 logger,
                 handler: new DefaultPageHandler(
-                    Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["root"]), logger,
+                    new DefaultPageHandlerSettings
+                    {
+                        PhysicalBasePath = Path.Combine(AppContext.BaseDirectory, iniFile.Sections["dph"]["physical_base_path"]),
+                        DefaultPage = iniFile.Sections["dph"]["default_page"]
+                    }, 
+                    logger,
                     new FileCacheSettings
                     {
                         cacheClearingInterval = int.Parse(iniFile.Sections["dph_file_cache"]["cache_clearing_interval"]),

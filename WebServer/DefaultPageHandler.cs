@@ -1,6 +1,7 @@
 ﻿using Nativa;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Text;
 
@@ -8,10 +9,9 @@ namespace WebServer
 {
     internal class DefaultPageHandler : IPageHandler
     {
-        public string DefaultPage = "index.html";
-        public readonly string PhysicalBasePath;
         private readonly FileCache cache;
         private readonly Logger logger;
+        private readonly DefaultPageHandlerSettings settings;
 
         HttpHelper.Response IPageHandler.GetPage(string URI, bool onlyHead)
         {
@@ -19,7 +19,7 @@ namespace WebServer
             string actualPath = GetActualPath(URI);
             if (Directory.Exists(actualPath) && !File.Exists(actualPath))
             {
-                actualPath = Path.Combine(actualPath, DefaultPage);
+                actualPath = Path.Combine(actualPath, settings.DefaultPage);
             }
             CheckPathAccessibility(ref actualPath);
             string contentType = GetContentType(actualPath);
@@ -51,16 +51,17 @@ namespace WebServer
             return res;
         }
 
-        public DefaultPageHandler(string physicalBasePath, Logger logger, FileCacheSettings cacheSettings)
+        public DefaultPageHandler(DefaultPageHandlerSettings handlerSettings, Logger logger, FileCacheSettings cacheSettings)
         {
-            if (!Directory.Exists(physicalBasePath))
+            if (!Directory.Exists(handlerSettings.PhysicalBasePath))
             {
-                Directory.CreateDirectory(physicalBasePath);
+                Directory.CreateDirectory(handlerSettings.PhysicalBasePath);
             }
-            PhysicalBasePath = physicalBasePath;
+            settings = handlerSettings;
             this.logger = logger;
             cache = new FileCache(logger, cacheSettings);
             logger.Log("使用默认页面处理模块。");
+            logger.Log(string.Format("网站物理路径位于：{0}", settings.PhysicalBasePath));
         }
 
         private string GetActualPath(string URI)
@@ -73,12 +74,12 @@ namespace WebServer
                     break;
                 }
             }
-            return Path.Combine(PhysicalBasePath, URI[i..]);
+            return Path.Combine(settings.PhysicalBasePath, URI[i..]);
         }
 
         private void CheckPathAccessibility(ref string path)
         {
-            if (!path.Contains(PhysicalBasePath)) throw new UnauthorizedAccessException();
+            if (!path.Contains(settings.PhysicalBasePath)) throw new UnauthorizedAccessException();
         }
 
         private string GetContentType(string filePath)
