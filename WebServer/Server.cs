@@ -172,7 +172,8 @@ namespace WebServer
                             logger.Dbg(string.Format("{0} 压缩结束", sw.ElapsedTicks.ToString()));
 #endif
                         }
-                        response.Headers.TryAdd(HeaderStrings.ContentLength, response.Body.Length.ToString()); //这是 keep-alive 模式所必需的
+                        if (response.Body != null)
+                            response.Headers.TryAdd(HeaderStrings.ContentLength, response.Body.Length.ToString()); //这是 keep-alive 模式所必需的
                         response.Headers.TryAdd(HeaderStrings.Server, "Nativa WebServer");
                         response.Headers.TryAdd(HeaderStrings.Date, DateTime.Now.ToString());
                         if (!keepAlive)
@@ -198,7 +199,7 @@ namespace WebServer
                     stream.Flush();
                 }
 
-                if (!keepAlive || requestCount >= settings.keepAliveMaxRequestCount)
+                if (!keepAlive || requestCount >= settings.keepAliveMaxRequestCount || response.Body == null)
                 {
                     break;
                 }
@@ -206,7 +207,6 @@ namespace WebServer
 
             sw.Stop();
             client.Close();
-            GC.Collect();
         }
 
         public Server(ServerSettings settings, Logger logger, IPageHandler handler)
