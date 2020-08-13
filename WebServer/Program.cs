@@ -19,7 +19,6 @@ namespace WebServer
                     { "keep_alive_max_delay", "4000" },
                     { "keep_alive_max_request_count", "100" },
                     { "compress_min_size", "1048576" },
-                    { "log_save_location", "log" },
                     { "aggressive_chunking", "false" }
                 });
             iniFile.SetDefault(
@@ -53,12 +52,13 @@ namespace WebServer
                 new Dictionary<string, string>
                 {
                     { "show_log_on_screen", "true" }
+                    { "log_save_location", "log" },
                 });
             iniFile.Save();
             GC.Collect(); //轻装上阵
 
             Logger logger = new Logger(
-                Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["log_save_location"]),
+                Path.Combine(AppContext.BaseDirectory, iniFile.Sections["global"]["log_save_location"]),
                 bool.Parse(iniFile.Sections["global"]["show_log_on_screen"]));
             Server server = new Server(
                 new ServerSettings
