@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 
@@ -27,7 +28,7 @@ namespace WebServer
             return new HttpHelper.Response
             {
                 StatusCode = exception.ErrorCode,
-                Headers = new Dictionary<string, string>
+                Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                             {
                                 { HeaderStrings.ContentType, "text/html" }
                             },

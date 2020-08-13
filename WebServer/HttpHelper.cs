@@ -116,7 +116,7 @@ namespace WebServer
             }
             res.ProtocolVersion = requestLine[2];
 
-            res.Headers = new Dictionary<string, string>();
+            res.Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             foreach (string line in lines[1..])
             {
                 if (line.Length == 0)

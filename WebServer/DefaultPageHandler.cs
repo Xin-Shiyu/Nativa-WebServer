@@ -1,4 +1,5 @@
 ﻿using Nativa;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -10,7 +11,7 @@ namespace WebServer
         private readonly Logger logger;
         private readonly DefaultPageHandlerSettings settings;
         private readonly Dictionary<string, string> contentTypeDictionary =
-            new Dictionary<string, string>
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
                 { "txt" , "text/plain" },
                 { "xml" , "text/xml" },
