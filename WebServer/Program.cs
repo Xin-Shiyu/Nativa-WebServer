@@ -51,7 +51,7 @@ namespace WebServer
                 "global",
                 new Dictionary<string, string>
                 {
-                    { "show_log_on_screen", "true" }
+                    { "show_log_on_screen", "true" },
                     { "log_save_location", "log" },
                 });
             iniFile.Save();
