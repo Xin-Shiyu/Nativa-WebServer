@@ -1,5 +1,4 @@
 ﻿using Nativa;
-using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -32,10 +31,10 @@ namespace WebServer
             {
                 actualPath = Path.Combine(actualPath, settings.DefaultPage);
             }
+            res.StatusCode = File.Exists(actualPath) ? 200 : throw WebException.GetException(404);
             CheckPathAccessibility(ref actualPath);
             string contentType = GetContentType(ref actualPath);
 
-            res.StatusCode = File.Exists(actualPath) ? 200 : throw WebException.GetException(404);
             res.Headers = new Dictionary<string, string>
             {
                 { HeaderStrings.ContentType , contentType },
@@ -53,7 +52,7 @@ namespace WebServer
                 //}
             }
 
-            res.Headers.Add(HeaderStrings.CacheControl, String.Format("max-age={0}", cache.GetFileLife(actualPath)));
+            res.Headers.Add(HeaderStrings.CacheControl, string.Format("max-age={0}", cache.GetFileLife(actualPath)));
 
             return res;
         }
@@ -86,12 +85,15 @@ namespace WebServer
 
         private void CheckPathAccessibility(ref string path)
         {
-            if (!path.Contains(settings.PhysicalBasePath)) throw WebException.GetException(403);
+            if (!path.Contains(settings.PhysicalBasePath))
+            {
+                throw WebException.GetException(403);
+            }
         }
 
         private string GetContentType(ref string filePath)
         {
-            if (contentTypeDictionary.TryGetValue(filePath[(filePath.LastIndexOf('.') + 1)..].ToLower(), out var ret))
+            if (contentTypeDictionary.TryGetValue(filePath[(filePath.LastIndexOf('.') + 1)..].ToLower(), out string ret))
             {
                 return ret;
             }

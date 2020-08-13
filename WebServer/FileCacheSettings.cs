@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WebServer
+﻿namespace WebServer
 {
-    struct FileCacheSettings
+    internal struct FileCacheSettings
     {
         public int cacheClearingInterval;
         public int initLife;

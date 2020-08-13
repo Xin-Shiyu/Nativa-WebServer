@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WebServer
+﻿namespace WebServer
 {
-    struct ServerSettings
+    internal struct ServerSettings
     {
         public int port;
         public int compressMinSize;

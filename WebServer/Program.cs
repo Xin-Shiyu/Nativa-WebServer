@@ -2,7 +2,6 @@
 using Nativa;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.Design.Serialization;
 using System.IO;
 
 namespace WebServer
@@ -11,7 +10,7 @@ namespace WebServer
     {
         private static void Main()
         {
-            var iniFile = new IniFile(Path.Combine(AppContext.BaseDirectory, "config.ini"));
+            IniFile iniFile = new IniFile(Path.Combine(AppContext.BaseDirectory, "config.ini"));
             iniFile.SetDefault(
                 "nws",
                 new Dictionary<string, string>
@@ -31,7 +30,11 @@ namespace WebServer
                     //对于旧的配置的兼容性措施
                     { "default_page", "index.html" }
                 });
-            if (iniFile.Sections["nws"].ContainsKey("root")) iniFile.Sections["nws"].Remove("root"); //兼容完了还是要升级的，不能留着误会
+            if (iniFile.Sections["nws"].ContainsKey("root"))
+            {
+                iniFile.Sections["nws"].Remove("root"); //兼容完了还是要升级的，不能留着误会
+            }
+
             iniFile.SetDefault(
                 "dph_file_cache",
                 new Dictionary<string, string>
@@ -54,7 +57,7 @@ namespace WebServer
             iniFile.Save();
             GC.Collect(); //轻装上阵
 
-            var logger = new Logger(
+            Logger logger = new Logger(
                 Path.Combine(AppContext.BaseDirectory, iniFile.Sections["nws"]["log_save_location"]),
                 bool.Parse(iniFile.Sections["global"]["show_log_on_screen"]));
             Server server = new Server(
@@ -72,7 +75,7 @@ namespace WebServer
                     {
                         PhysicalBasePath = Path.Combine(AppContext.BaseDirectory, iniFile.Sections["dph"]["physical_base_path"]),
                         DefaultPage = iniFile.Sections["dph"]["default_page"]
-                    }, 
+                    },
                     logger,
                     new FileCacheSettings
                     {

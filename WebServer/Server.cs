@@ -1,6 +1,5 @@
 ﻿using Nativa;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -9,7 +8,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace WebServer
 {
@@ -106,7 +104,7 @@ namespace WebServer
                     logger.Dbg(string.Format("{0} 解析结束", sw.ElapsedTicks.ToString()));
 #endif
                     if (request.Headers.ContainsKey(HeaderStrings.Connection) &&
-                        request.Headers[HeaderStrings.Connection] == "keep-alive")
+                        request.Headers[HeaderStrings.Connection].Equals("keep-alive", StringComparison.OrdinalIgnoreCase))
                     {
                         keepAlive = true;
                     }

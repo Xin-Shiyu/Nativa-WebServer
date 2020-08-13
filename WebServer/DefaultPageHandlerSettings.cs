@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WebServer
+﻿namespace WebServer
 {
-    struct DefaultPageHandlerSettings
+    internal struct DefaultPageHandlerSettings
     {
         public string DefaultPage;
         public string PhysicalBasePath;

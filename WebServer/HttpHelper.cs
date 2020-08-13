@@ -6,7 +6,7 @@ using System.Text;
 
 namespace WebServer
 {
-    static class HeaderStrings
+    internal static class HeaderStrings
     {
         internal const string CacheControl = "Cache-Control";
         internal const string ContentType = "Content-Type";
@@ -55,15 +55,18 @@ namespace WebServer
             public byte[] HeadToByteArray()
             {
                 StringBuilder sb = new StringBuilder();
-                sb.Append(string.Format(
-                    "HTTP/1.1 {0} {1}\r\n",
-                    StatusCode,
-                    GetStatusCodeName(StatusCode)));
+                sb.Append("HTTP/1.1 ");
+                sb.Append(StatusCodeString[StatusCode]);
+                sb.Append("\r\n");
+
                 if (Headers != null)
                 {
                     foreach (KeyValuePair<string, string> header in Headers)
                     {
-                        sb.Append(string.Format("{0}: {1}\r\n", header.Key, header.Value));
+                        sb.Append(header.Key);
+                        sb.Append(": ");
+                        sb.Append(header.Value);
+                        sb.Append("\r\n");
                     }
                 }
                 sb.Append("\r\n");
@@ -71,18 +74,14 @@ namespace WebServer
                 return Encoding.ASCII.GetBytes(sb.ToString()); //HTTP 头应该是 ASCII 编码
             }
 
-            public static string GetStatusCodeName(int statusCode)
+            public static Dictionary<int, string> StatusCodeString = new Dictionary<int, string>
             {
-                return statusCode switch
-                {
-                    200 => "OK",
-                    301 => "Moved Permanently",
-                    404 => "Not Found",
-                    403 => "Forbidden",
-                    500 => "Internal Server Error",
-                    _ => ""
-                };
-            }
+                { 200, "200 OK" },
+                { 301, "301 Moved Permanently" },
+                { 404, "404 Not Found" },
+                { 403, "403 Forbidden" },
+                { 500, "500 Internal Server Error" },
+            };
         }
 
         public static Request ParseRequest(string request)
@@ -136,7 +135,11 @@ namespace WebServer
         public static string DecodeURL(string text) //这个算法可能不是很干净，也是默认 UTF8
         {
             text = text.Replace('+', ' ');
-            if (!text.Contains('%')) return text;
+            if (!text.Contains('%'))
+            {
+                return text;
+            }
+
             MemoryStream stream = new MemoryStream();
             StringBuilder sb = new StringBuilder();
             bool inCode = false;
@@ -164,8 +167,15 @@ namespace WebServer
                     }
                 }
             }
-            if (stream.Length != 0) sb.Append(Encoding.UTF8.GetString(stream.ToArray()));
-            else sb.Append(text[lastRawPoint..]); //假如 stream 为空则最后一个片段不带 %，一定剩下了生字符串
+            if (stream.Length != 0)
+            {
+                sb.Append(Encoding.UTF8.GetString(stream.ToArray()));
+            }
+            else
+            {
+                sb.Append(text[lastRawPoint..]); //假如 stream 为空则最后一个片段不带 %，一定剩下了生字符串
+            }
+
             stream.Dispose();
             return sb.ToString();
         }

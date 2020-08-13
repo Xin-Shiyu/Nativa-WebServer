@@ -1,18 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace WebServer
 {
-    interface IErrorPageHandler
+    internal interface IErrorPageHandler
     {
         public HttpHelper.Response GetPage(WebException exception);
     }
 
-    class WebException : Exception {
+    internal class WebException : Exception
+    {
         public int ErrorCode { get; }
-        public WebException(int errorCode, Exception inner = null) 
-            : base(string.Format("{0} {1}", errorCode, HttpHelper.Response.GetStatusCodeName(errorCode)), inner)
+        public WebException(int errorCode, Exception inner = null)
+            : base(HttpHelper.Response.StatusCodeString[errorCode], inner)
         {
             ErrorCode = errorCode;
         }
