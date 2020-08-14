@@ -192,7 +192,7 @@ namespace WebServer
 #endif
                     try
                     {
-                        stream.Write(response.HeadToByteArray());
+                        response.WriteToStream(ref stream);
                         stream.Write(response.Body); //分开发送，免去拷贝
                     }
                     catch (IOException ex)

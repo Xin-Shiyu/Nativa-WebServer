@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 
 namespace WebServer
@@ -46,7 +47,29 @@ namespace WebServer
             public int StatusCode;
             public Dictionary<string, string> Headers;
             public byte[] Body;
+            public static readonly byte[] crLf = Encoding.ASCII.GetBytes("\r\n");
+            public static readonly byte[] colonSpace = Encoding.ASCII.GetBytes(": ");
 
+            public void WriteToStream(ref NetworkStream stream)
+            {
+                stream.Write(Encoding.ASCII.GetBytes("HTTP/1.1"));
+                stream.Write(Encoding.ASCII.GetBytes(StatusCodeString[StatusCode]));
+                stream.Write(crLf);
+
+                if (Headers != null)
+                {
+                    foreach (KeyValuePair<string, string> header in Headers)
+                    {
+                        stream.Write(Encoding.ASCII.GetBytes(header.Key));
+                        stream.Write(colonSpace);
+                        stream.Write(Encoding.ASCII.GetBytes(header.Value));
+                        stream.Write(crLf);
+                    }
+                }
+                stream.Write(crLf);
+            }
+
+            [Obsolete]
             public byte[] HeadToByteArray()
             {
                 StringBuilder sb = new StringBuilder();
