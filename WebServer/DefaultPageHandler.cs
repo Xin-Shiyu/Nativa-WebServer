@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net;
 
 namespace WebServer
 {
@@ -23,32 +24,64 @@ namespace WebServer
                 { "jpg" , "image/jpeg" },
                 { "ico" , "image/x-icon" },
             };
+        private readonly int maxWholeFileLength = 1024 * 1024 * 20; //瞎写的，以后再改
 
-        HttpHelper.Response IPageHandler.GetPage(string URI, bool onlyHead)
+        HttpHelper.Response IPageHandler.GetPage(string URI)
         {
-            HttpHelper.Response res = new HttpHelper.Response();
             string actualPath = GetActualPath(URI);
-            if (Directory.Exists(actualPath) && !File.Exists(actualPath))
+            if (cache.GetFileLength(actualPath) >= maxWholeFileLength)
             {
-                actualPath = Path.Combine(actualPath, settings.DefaultPage);
+                return GetPartialPage(ref actualPath, 0, maxWholeFileLength);
             }
-            res.StatusCode = File.Exists(actualPath) ? 200 : throw WebException.GetException(404);
-            CheckPathAccessibility(ref actualPath);
-            string contentType = GetContentType(ref actualPath);
 
-            res.Headers = new Dictionary<string, string>
+            return new HttpHelper.Response
             {
-                { HeaderStrings.ContentType , contentType },
+                StatusCode = 200,
+                Body = cache.ReadFile(actualPath),
+                Headers = new Dictionary<string, string>
+                {
+                    { HeaderStrings.ContentType , GetContentType(ref actualPath) },
+                    { HeaderStrings.CacheControl, string.Format("max-age={0}", cache.GetFileLife(actualPath)) },
+                    { HeaderStrings.AcceptRanges, HeaderStrings.Bytes }
+                }
             };
+        }
 
-            if (!onlyHead)
+        HttpHelper.Response IPageHandler.GetHead(string URI)
+        {
+            string actualPath = GetActualPath(URI);
+            return new HttpHelper.Response
             {
-                res.Body = cache.ReadFile(actualPath);
-            }
+                StatusCode = 200,
+                Headers = new Dictionary<string, string>
+                {
+                    { HeaderStrings.ContentType , GetContentType(ref actualPath) },
+                    { HeaderStrings.ContentLength, cache.GetFileLength(actualPath).ToString() },
+                    { HeaderStrings.AcceptRanges, HeaderStrings.Bytes }
+                }
+            };
+        }
 
-            res.Headers.Add(HeaderStrings.CacheControl, string.Format("max-age={0}", cache.GetFileLife(actualPath)));
+        HttpHelper.Response IPageHandler.GetPage(string URI, int begin, int end)
+        {
+            string actualPath = GetActualPath(URI);
+            return GetPartialPage(ref actualPath, begin, end);
+        }
 
-            return res;
+        private HttpHelper.Response GetPartialPage(ref string actualPath, int begin, int end)
+        {
+            return new HttpHelper.Response
+            {
+                StatusCode = 206,
+                Body = cache.ReadPartialFile(actualPath, begin, end, out var fullLength),
+                Headers = new Dictionary<string, string>
+                    {
+                        { HeaderStrings.ContentType , GetContentType(ref actualPath) },
+                        { HeaderStrings.CacheControl, string.Format("max-age={0}", cache.GetFileLife(actualPath)) },
+                        { HeaderStrings.AcceptRanges, HeaderStrings.Bytes },
+                        { HeaderStrings.ContentRange, string.Format("bytes {0}-{1}/{2}", begin, end, fullLength) }
+                    }
+            };
         }
 
         public DefaultPageHandler(DefaultPageHandlerSettings handlerSettings, Logger logger, FileCacheSettings cacheSettings)
@@ -74,7 +107,14 @@ namespace WebServer
                     break;
                 }
             }
-            return Path.Combine(settings.PhysicalBasePath, URI[i..]);
+            var res = Path.Combine(settings.PhysicalBasePath, URI[i..]);
+            if (Directory.Exists(res) && !File.Exists(res))
+            {
+                res = Path.Combine(res, settings.DefaultPage);
+            }
+            if (!File.Exists(res)) throw WebException.GetException(404);
+            CheckPathAccessibility(ref res);
+            return res;
         }
 
         private void CheckPathAccessibility(ref string path)

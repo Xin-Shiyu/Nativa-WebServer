@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
@@ -15,12 +16,17 @@ namespace WebServer
         internal const string Connection = "Connection";
         internal const string UserAgent = "User-Agent";
         internal const string AcceptEncoding = "Accept-Encoding";
+        internal const string AcceptRanges = "Accept-Ranges";
         internal const string Gzip = "gzip";
         internal const string ContentEncoding = "Content-Encoding";
         internal const string ContentLength = "Content-Length";
+        internal const string ContentRange = "Content-Range";
         internal const string Server = "Server";
         internal const string Date = "Date";
         internal const string Close = "Close";
+        internal const string Range = "Range";
+        internal const string KeepAlive = "keep-alive";
+        internal const string Bytes = "bytes";
     }
 
     internal class HttpHelper
@@ -46,7 +52,7 @@ namespace WebServer
         {
             public int StatusCode;
             public Dictionary<string, string> Headers;
-            public byte[] Body;
+            public ReadOnlyMemory<byte> Body;
             public static readonly byte[] crLf = Encoding.ASCII.GetBytes("\r\n");
             public static readonly byte[] colonSpace = Encoding.ASCII.GetBytes(": ");
 
@@ -95,6 +101,7 @@ namespace WebServer
             public static Dictionary<int, string> StatusCodeString = new Dictionary<int, string>
             {
                 { 200, "200 OK" },
+                { 206, "206 Partial Content"},
                 { 301, "301 Moved Permanently" },
                 { 404, "404 Not Found" },
                 { 403, "403 Forbidden" },
@@ -229,6 +236,24 @@ namespace WebServer
 
             stream.Dispose();
             return sb.ToString();
+        }
+
+        public static bool TryParseRange(ReadOnlyMemory<char> text, out int begin, out int end)
+        {
+            begin = 0;
+            end = 0;
+
+            var span = text.Span;
+
+            if (span.IndexOf(',') != -1) //暂不支持多段区间
+            {
+                return false; 
+            }
+
+            var range = span[(span.IndexOf('=') + 1)..];
+            return
+                int.TryParse(range[..range.IndexOf('-')], out begin) &&
+                int.TryParse(range[(range.IndexOf('-') + 1)..], out end);
         }
     }
 }

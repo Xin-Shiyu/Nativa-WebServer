@@ -37,6 +37,33 @@ namespace WebServer
             }
         }
 
+        public int GetFileLength(string filename)
+        {
+            if (cache.ContainsKey(filename)) return cache[filename].Length;
+
+            var info = new FileInfo(filename);
+            return (int)info.Length; //不是很安全，以后再改吧
+        }
+
+        public ReadOnlyMemory<byte> ReadPartialFile(string filename, int begin, int end, out int fullLength)
+        {
+            if (cache.ContainsKey(filename))
+            {
+                var memory = cache[filename].AsMemory();
+                fullLength = memory.Length;
+                return memory[begin..end];
+            }
+            else
+            {
+                fullLength = GetFileLength(filename);
+                var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+                stream.Seek(begin, SeekOrigin.Begin);
+                var memory = new byte[end - begin + 1];
+                stream.Read(memory);
+                return memory;
+            }
+        }
+
         public byte[] ReadFile(string filename)
         {
             while (isClearing) { } //清理优先，新缓存让路
