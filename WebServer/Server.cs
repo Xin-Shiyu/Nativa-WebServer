@@ -1,5 +1,6 @@
 ﻿using Nativa;
 using System;
+using System.Collections;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -53,19 +54,17 @@ namespace WebServer
 
             for (; ; )
             {
-                byte[] buffer = new byte[1024];
-                StringBuilder sb = new StringBuilder();
-                int numberOfBytesRead;
 #if DEBUG
                 logger.Dbg(string.Format("{0} 等待开始", sw.ElapsedTicks.ToString()));
 #endif
-                bool noMoreRequest = true;
-                while (sw.ElapsedMilliseconds < settings.keepAliveMaxDelay) //等待一定时长
+                bool noMoreRequest = false;
+                while (!stream.DataAvailable)
                 {
-                    if (stream.DataAvailable)
+                    Thread.Sleep(TimeSpan.Zero);
+                    if (sw.ElapsedMilliseconds >= settings.keepAliveMaxDelay)
                     {
-                        noMoreRequest = false;
-                        break; //若请求来了则停止等待
+                        noMoreRequest = true;
+                        break;
                     }
                 }
 #if DEBUG
@@ -79,11 +78,19 @@ namespace WebServer
 #if DEBUG
                 logger.Dbg(string.Format("{0} 接受请求", sw.ElapsedTicks.ToString()));
 #endif
-                do
+
+                string requestString;
                 {
-                    numberOfBytesRead = stream.Read(buffer, 0, buffer.Length);
-                    sb.Append(Encoding.ASCII.GetString(buffer, 0, numberOfBytesRead));
-                } while (stream.DataAvailable);
+                    StringBuilder sb = new StringBuilder();
+                    Span<byte> buffer = stackalloc byte[1024];
+                    int numberOfBytesRead;
+                    do
+                    {
+                        numberOfBytesRead = stream.Read(buffer);
+                        sb.Append(Encoding.ASCII.GetString(buffer.Slice(0, numberOfBytesRead)));
+                    } while (stream.DataAvailable);
+                    requestString = sb.ToString();
+                }
                 ++requestCount;
 
 #if DEBUG
@@ -94,17 +101,16 @@ namespace WebServer
                 HttpHelper.Response response;
                 try
                 {
-
 #if DEBUG
                     logger.Dbg(string.Format("{0} 解析请求", sw.ElapsedTicks.ToString()));
 #endif
-                    HttpHelper.Request request = HttpHelper.ParseRequest(sb.ToString());
+                    HttpHelper.Request request = HttpHelper.ParseRequest(in requestString);
 
 #if DEBUG
                     logger.Dbg(string.Format("{0} 解析结束", sw.ElapsedTicks.ToString()));
 #endif
                     if (request.Headers.ContainsKey(HeaderStrings.Connection) &&
-                        request.Headers[HeaderStrings.Connection].Equals("keep-alive", StringComparison.OrdinalIgnoreCase))
+                        MemoryExtensions.Equals(request.Headers[HeaderStrings.Connection].Span, "keep-alive", StringComparison.OrdinalIgnoreCase))
                     {
                         keepAlive = true;
                     }
@@ -113,28 +119,28 @@ namespace WebServer
                             "{0} {1} {2} [{3}] {4}",
                             client.Client.RemoteEndPoint,
                             request.Type,
-                            request.URL,
+                            request.URL.ToString(),
                             request.Arguments != null ?
                             string.Join("; ", request.Arguments.ToList()) :
                             "N/A",
                             request.Headers.ContainsKey(HeaderStrings.UserAgent) ?
-                            request.Headers[HeaderStrings.UserAgent] :
+                            request.Headers[HeaderStrings.UserAgent].ToString() :
                             "N/A"
-                            ));
+                            )); //这个按理还是会拖慢速度的毕竟要 ToString() 但目前还没啥特别好的解决方法
 #if DEBUG
                     logger.Dbg(string.Format("{0} 创建响应", sw.ElapsedTicks.ToString()));
 #endif
                     response = request.Type switch
                     {
-                        HttpHelper.RequestType.GET => handler.GetPage(request.URL),
-                        HttpHelper.RequestType.HEAD => handler.GetPage(request.URL, onlyHead: true),
+                        HttpHelper.RequestType.GET => handler.GetPage(request.URL.ToString()),
+                        HttpHelper.RequestType.HEAD => handler.GetPage(request.URL.ToString(), onlyHead: true),
                         _ => throw new NotImplementedException(),
                     };
 #if DEBUG
                     logger.Dbg(string.Format("{0} 创建结束", sw.ElapsedTicks.ToString()));
 #endif
                     if (request.Headers.ContainsKey(HeaderStrings.AcceptEncoding) &&
-                        request.Headers[HeaderStrings.AcceptEncoding].Contains(HeaderStrings.Gzip) &&
+                        request.Headers[HeaderStrings.AcceptEncoding].Span.IndexOf(HeaderStrings.Gzip) != -1 && //就问你别扭不别扭
                         response.Body.Length > settings.compressMinSize)
                     {
                         doCompress = true;
@@ -204,7 +210,7 @@ namespace WebServer
                     break;
                 }
             }
-
+            
             sw.Stop();
             client.Close();
         }

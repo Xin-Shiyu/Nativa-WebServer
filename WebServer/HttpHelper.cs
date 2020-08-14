@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -28,21 +29,15 @@ namespace WebServer
             GET,
             HEAD,
             POST,
-            PUT,
-            DELETE,
-            CONNECT,
-            OPTIONS,
-            TRACE,
-            PATCH,
         }
 
-        public class Request
+        public ref struct Request
         {
             public RequestType Type;
-            public string URL;
-            public Dictionary<string, string> Arguments;
-            public string ProtocolVersion;
-            public Dictionary<string, string> Headers;
+            public ReadOnlySpan<char> URL;
+            public Dictionary<string, ReadOnlyMemory<char>> Arguments;
+            public ReadOnlySpan<char> ProtocolVersion;
+            public Dictionary<string, ReadOnlyMemory<char>> Headers;
             //public byte[] Data;
         }
 
@@ -84,50 +79,83 @@ namespace WebServer
             };
         }
 
-        public static Request ParseRequest(string request)
+        public static Request ParseRequest(in string request) //奇技淫巧
         {
             Request res = new Request();
-            string[] lines = request.Split("\r\n"); //Encoding.ASCII.GetString(request).Split("\r\n");
 
-            string[] requestLine = lines[0].Split(' ');
-            res.Type = requestLine[0] switch
+            var span = request.AsSpan();
+            int left = 0;
+            int right = span.IndexOf(' '); //这两个东西相当于指针，在 span 上面移动
+            var requestType = span[left..right]; //先读入第一个空格前面的东西，也就是请求类型
+            if (MemoryExtensions.Equals(requestType, "GET", StringComparison.Ordinal))
             {
-                "GET" => RequestType.GET,
-                "HEAD" => RequestType.HEAD,
-                "POST" => RequestType.POST,
-                "PUT" => RequestType.POST,
-                "DELETE" => RequestType.DELETE,
-                "CONNECT" => RequestType.CONNECT,
-                "OPTIONS" => RequestType.OPTIONS,
-                "TRACE" => RequestType.TRACE,
-                "PATCH" => RequestType.PATCH,
-                _ => throw new NotSupportedException("意料之外的请求类型 " + requestLine[0])
-            };
-            if (requestLine[1].Contains('?'))
+                res.Type = RequestType.GET;
+            }
+            else if (MemoryExtensions.Equals(requestType, "HEAD", StringComparison.Ordinal))
             {
-                res.URL = requestLine[1][..requestLine[1].IndexOf('?')];
-                res.Arguments = requestLine[1][(requestLine[1].IndexOf('?') + 1)..]
-                    .Split('&')
-                    .ToDictionary(part => DecodeURL(part[..part.IndexOf('=')]), part => DecodeURL(part[(part.IndexOf('=') + 1)..]));
+                res.Type = RequestType.HEAD;
             }
             else
             {
-                res.URL = DecodeURL(requestLine[1]);
+                throw new NotSupportedException();
             }
-            res.ProtocolVersion = requestLine[2];
+            // ?a=b&c=d&e=f
+            left = right + 1; //空格的后一个字符
+            right = left + span[left..].IndexOf(' ');
+            var URL = span[left..right]; //这不代表真正的 URL，因为后面可能还有查询字符串
 
-            res.Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            foreach (string line in lines[1..])
+            int innerRight; //这个之后会用到，用来分隔键值
+
+            if ((left = URL.IndexOf('?')) != -1) //解析查询字符串
             {
-                if (line.Length == 0)
+                res.URL = span[..left]; //字面上上有点奇怪，但是结合上下文可以知道确切语义
+                res.Arguments = new Dictionary<string, ReadOnlyMemory<char>>();
+                ++left; //原本 left 的位置是在 ? 上的
+                string key;
+                while ((right = URL[left..].IndexOf('&')) != -1) //如果不止一个参数
                 {
-                    break; //之后是数据部分
+                    right += left; //加上 left，偏移到实际的位置而不是子串的位置
+                    //此时 right 的位置在 & 上
+                    innerRight = left + URL[left..].IndexOf('=');
+                    key = URL[left..innerRight].ToString(); //毕竟 key 还得是 string 所以转回去，谁叫切片不能 GetHashCode
+                    left = innerRight + 1;
+                    res.Arguments.Add(key, 
+                                      // 等号左边的为键
+                                      request.AsMemory()[left..right]); // 等号右边的为值，不能从 span 里切了，因为这里的类型是 memory
+                    left = right + 1; //左边移到右边的右边，进入下一个 entry
                 }
-
-                string field = line[..line.IndexOf(':')];
-                string value = line[(field.Length + 1)..];
-                res.Headers.Add(field, value.Trim());
+                //下面是最后一个参数或者唯一一个参数的切分，前三句和循环里一样，但是因为在边缘必须分开处理
+                innerRight = left + URL[left..].IndexOf('=');
+                key = URL[left..innerRight].ToString();
+                left = innerRight + 1;
+                right = left + URL[left..].IndexOf(' '); //到下一个空格处为止
+                res.Arguments.Add(key, request.AsMemory()[left..right]); //最后一个参数
             }
+            else
+            {
+                res.URL = URL; //没有查询字符串是最好的，直接给它就行了
+            }
+
+            //这时候到了 HTTP/1.1 的部分
+            left = right + 1;
+            right = left + span[left..].IndexOf("\r\n"); //下一个分隔应当是回车加换行
+            res.ProtocolVersion = span[left..right];
+
+            left = right + 2; //因为回车加换行为两个字符，都跳过
+            //下面开始故技重施，和切分查询字符串差不多，只不过边缘情况这里是两个回车加换行（或曰空行），之前的则是 & 变成空格
+            right = left + span[left..].IndexOf("\r\n"); //consume 一整行;
+            res.Headers = new Dictionary<string, ReadOnlyMemory<char>>();
+            while ((innerRight = span[left..right].IndexOf(':')) != -1) //判断标准就是有没有键值分隔符 ：
+            {
+                innerRight += left; //同理偏移
+                string key = span[left..innerRight].ToString(); //同之前的理，没办法，key 仿佛必须是 string
+                left = innerRight + 1;
+                while (span[left] == ' ') ++left; //跳过空白，原本用 Trim，但这里怎么可能 Trim 呢，我们根本没有独立的字符串，全是切片
+                res.Headers.Add(key, request.AsMemory()[left..right]); //同理不解释
+                left = right + 2;
+                right = left + span[left..].IndexOf("\r\n"); //去下一行
+            }
+            //如果是 POST 后面还有数据可我不想管它了哈哈哈哈反正目前也没打算支持 POST
 
             return res;
         }
