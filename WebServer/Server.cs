@@ -213,6 +213,7 @@ namespace WebServer
             
             sw.Stop();
             client.Close();
+            client.Dispose(); //我猜这里应该 Dispose 掉
         }
 
         public Server(ServerSettings settings, Logger logger, IPageHandler handler)

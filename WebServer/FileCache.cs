@@ -45,7 +45,6 @@ namespace WebServer
             {
                 cache.TryAdd(filename, File.ReadAllBytes(filename));
             }
-
             return cache[filename];
         }
 

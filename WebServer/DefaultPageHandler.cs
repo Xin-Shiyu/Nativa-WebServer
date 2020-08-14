@@ -43,14 +43,7 @@ namespace WebServer
 
             if (!onlyHead)
             {
-                //if (contentType[..5] == "text")
-                //{
-                //    res.Body = cache.ReadTextFile(actualPath);
-                //}
-                //else
-                //{
                 res.Body = cache.ReadFile(actualPath);
-                //}
             }
 
             res.Headers.Add(HeaderStrings.CacheControl, string.Format("max-age={0}", cache.GetFileLife(actualPath)));
