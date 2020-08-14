@@ -1,6 +1,6 @@
 ﻿namespace WebServer
 {
-    internal struct FileCacheSettings
+    internal class FileCacheSettings
     {
         public int cacheClearingInterval;
         public int initLife;

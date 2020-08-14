@@ -1,6 +1,6 @@
 ﻿namespace WebServer
 {
-    internal struct ServerSettings
+    internal class ServerSettings
     {
         public int port;
         public int compressMinSize;

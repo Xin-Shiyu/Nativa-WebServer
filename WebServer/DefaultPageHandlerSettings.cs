@@ -1,6 +1,6 @@
 ﻿namespace WebServer
 {
-    internal struct DefaultPageHandlerSettings
+    internal class DefaultPageHandlerSettings
     {
         public string DefaultPage;
         public string PhysicalBasePath;
