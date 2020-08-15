@@ -45,6 +45,7 @@ namespace WebServer
             return (int)info.Length; //不是很安全，以后再改吧
         }
 
+        [Obsolete]
         public ReadOnlyMemory<byte> ReadPartialFile(string filename, int begin, ref int end, out int fullLength)
         {
             if (cache.ContainsKey(filename))
@@ -156,7 +157,6 @@ namespace WebServer
                     cache.Remove(file, out _);
                     lifeDict.Remove(file, out _);
                 });
-            GC.Collect();
             isClearing = false;
         }
     }

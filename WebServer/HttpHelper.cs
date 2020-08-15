@@ -9,10 +9,11 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 
 namespace WebServer
 {
-    internal static class HeaderStrings
+    public static class HeaderStrings
     {
         internal const string CacheControl = "Cache-Control";
         internal const string ContentType = "Content-Type";
@@ -35,7 +36,7 @@ namespace WebServer
         public static readonly byte[] Date = Encoding.ASCII.GetBytes("Date");
     }
 
-    internal class HttpHelper
+    public class HttpHelper
     {
         public enum RequestType
         {
@@ -138,6 +139,7 @@ namespace WebServer
                     if (status != 206) WriteHeader(HeaderStrings.ContentLength, body.Length.ToString());
 
                     stream.Write(crLf);
+                    Thread.Sleep(TimeSpan.Zero);
                     stage = Stage.Body;
                     stream.Write(body.Span);
                 }
@@ -150,6 +152,7 @@ namespace WebServer
                 if (stage == Stage.Headers)
                 {
                     WriteCommonHeaders();
+                    Thread.Sleep(TimeSpan.Zero);
                     stage = Stage.Body;
                     WriteHeader(HeaderStrings.TransferEncoding, HeaderStrings.Chunked);
                     stream.Write(crLf);
