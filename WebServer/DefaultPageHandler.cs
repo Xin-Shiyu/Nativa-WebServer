@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Enumeration;
 using System.Net;
 
 namespace WebServer
@@ -24,8 +25,7 @@ namespace WebServer
                 { "jpg" , "image/jpeg" },
                 { "ico" , "image/x-icon" },
             };
-        private readonly int maxWholeFileLength = 1024 * 1024 * 20; //瞎写的，以后再改
-
+        /*
         HttpHelper.Response IPageHandler.GetPage(string URI)
         {
             string actualPath = GetActualPath(URI);
@@ -83,7 +83,7 @@ namespace WebServer
                     }
             };
         }
-
+        */
         public DefaultPageHandler(DefaultPageHandlerSettings handlerSettings, Logger logger, FileCacheSettings cacheSettings)
         {
             if (!Directory.Exists(handlerSettings.PhysicalBasePath))
@@ -132,6 +132,52 @@ namespace WebServer
                 return ret;
             }
             return "application/octet-stream";
+        }
+
+        public void WritePage(string URI, in HttpHelper.ResponseStream stream)
+        {
+            WriteHeadInternal(URI, in stream, out var actualPath);
+            if (cache.GetFileLength(actualPath) > 1024 * 1024)
+            {
+                //不经过 cache 了，直接读，因为 ReadPartialFile 另有它用
+                stream.WriteBody(provider);
+                IEnumerable<Memory<byte>> provider()
+                {
+                    using var fileStream = new FileStream(actualPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                    byte[] buffer = new byte[1024];
+                    while (fileStream.Read(buffer) != 0)
+                    {
+                        yield return buffer;
+                    }
+                    yield break;
+                }
+            }
+            else
+            {
+                stream.WriteBody(cache.ReadFile(actualPath));
+            }
+        }
+
+        public void WritePage(string URI, int begin, int end, in HttpHelper.ResponseStream stream)
+        {
+            WriteHeadInternal(URI, in stream, out var actualPath, 206);
+            var provider = cache.ReadPartialFileChunked(actualPath, begin, ref end, out var fullLength);
+            stream.WriteHeader(HeaderStrings.ContentRange, string.Format("byte {0}-{1}/{2}", begin, end, fullLength));
+            stream.WriteBody(provider);
+        }
+
+        public void WriteHead(string URI, HttpHelper.ResponseStream stream)
+        {
+            WriteHeadInternal(URI, in stream, out _);
+            stream.FinishSession();
+        }
+
+        private void WriteHeadInternal(string URI, in HttpHelper.ResponseStream stream, out string actualPath, int status = 200)
+        {
+            actualPath = GetActualPath(URI);
+            stream.WriteStatus(status);
+            stream.WriteHeader(HeaderStrings.ContentType, GetContentType(ref actualPath));
+            //stream.WriteHeader(HeaderStrings.ContentLength, cache.GetFileLength(actualPath).ToString());
         }
     }
 }

@@ -5,53 +5,32 @@ using System.Text;
 
 namespace WebServer
 {
+    //恶心地带
     internal class DefaultErrorPageHandler : IErrorPageHandler
     {
-        private readonly ConcurrentDictionary<WebException, HttpHelper.Response> miniPageCache = new ConcurrentDictionary<WebException, HttpHelper.Response>();
-        HttpHelper.Response IErrorPageHandler.GetPage(WebException exception)
+        //这是我有史以来写过最恶心的实现，没有之一，我都想不出来名字了
+        private static byte[] pageTemplatePart1 = Encoding.ASCII.GetBytes("<html><head><title>");
+        private static byte[] pageTemplatePart2 = Encoding.ASCII.GetBytes("</title></head><body><center><h1>");
+        private static byte[] pageTemplatePart3 = Encoding.ASCII.GetBytes("</h1><hr/><p>Nativa WebServer</p><pre>");
+        private static byte[] pageTemplatePart4 = Encoding.ASCII.GetBytes("</pre></center></body></html>");
+
+        void IErrorPageHandler.WritePage(WebException exception, HttpHelper.ResponseStream stream)
         {
-            if (!miniPageCache.TryGetValue(exception, out HttpHelper.Response page))
+            stream.WriteStatus(exception.ErrorCode);
+            stream.WriteHeader(HeaderStrings.ContentType, "text/html");
+            stream.WriteBody(provider);
+            IEnumerable<Memory<byte>> provider() //连我自己都没想到还能这么用 :(
             {
-                page = CreateErrorResponse(exception);
-                miniPageCache.TryAdd(exception, page);
+                yield return pageTemplatePart1; //对！我都准备好了！可我就是要这样 yield 过去因为我只提供了这个 API，我好贱
+                yield return HttpHelper.ResponseStream.StatusCodeString[exception.ErrorCode];
+                yield return pageTemplatePart2;
+                yield return HttpHelper.ResponseStream.StatusCodeString[exception.ErrorCode];
+                yield return pageTemplatePart3;
+                if (exception.InnerException != null) yield return Encoding.ASCII.GetBytes(exception.InnerException.Message);
+                yield return pageTemplatePart4;
+                yield break;
             }
-            if (miniPageCache.Count > 10)
-            {
-                miniPageCache.Clear();
-            }
-
-            return page;
-        }
-
-        private static HttpHelper.Response CreateErrorResponse(WebException exception)
-        {
-            return new HttpHelper.Response
-            {
-                StatusCode = exception.ErrorCode,
-                Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-                            {
-                                { HeaderStrings.ContentType, "text/html" }
-                            },
-                Body = Encoding.UTF8.GetBytes(CreateErrorPage(exception.Message, exception.InnerException?.Message))
-            };
-        }
-
-        private static string CreateErrorPage(string errorType, string furtherInformation)
-        {
-            return string.Format(
-                "<html>" +
-                    "<head><title>{0}</title></head>" +
-                    "<body>" +
-                        "<center>" +
-                            "<h1>{0}</h1>" +
-                            "<hr/>" +
-                            "<p>Nativa WebServer</p>" +
-                            "<pre>{1}</pre>" +
-                        "</center>" +
-                    "</body>" +
-                "</html>",
-                errorType,
-                furtherInformation);
+            stream.FinishSession();
         }
     }
 }

@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.Design;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace WebServer
@@ -21,12 +24,15 @@ namespace WebServer
         internal const string ContentEncoding = "Content-Encoding";
         internal const string ContentLength = "Content-Length";
         internal const string ContentRange = "Content-Range";
-        internal const string Server = "Server";
-        internal const string Date = "Date";
         internal const string Close = "Close";
         internal const string Range = "Range";
         internal const string KeepAlive = "keep-alive";
         internal const string Bytes = "bytes";
+        public static readonly byte[] TransferEncoding = Encoding.ASCII.GetBytes("Transfer-Encoding");
+        public static readonly byte[] Chunked = Encoding.ASCII.GetBytes("chunked");
+        public static readonly byte[] Server = Encoding.ASCII.GetBytes("Server");
+        public static readonly byte[] NWS = Encoding.ASCII.GetBytes("Nativa Web Server");
+        public static readonly byte[] Date = Encoding.ASCII.GetBytes("Date");
     }
 
     internal class HttpHelper
@@ -48,65 +54,137 @@ namespace WebServer
             //public byte[] Data;
         }
 
-        public class Response
+        public class ResponseStream
         {
-            public int StatusCode;
-            public Dictionary<string, string> Headers;
-            public ReadOnlyMemory<byte> Body;
-            public static readonly byte[] crLf = Encoding.ASCII.GetBytes("\r\n");
-            public static readonly byte[] colonSpace = Encoding.ASCII.GetBytes(": ");
-
-            public void WriteToStream(ref NetworkStream stream)
+            private static readonly byte[] http11 = Encoding.ASCII.GetBytes("HTTP/1.1");
+            private static readonly byte[] crLf = Encoding.ASCII.GetBytes("\r\n");
+            private static readonly byte[] colonSpace = Encoding.ASCII.GetBytes(": ");
+            private static readonly byte[] space = Encoding.ASCII.GetBytes(" ");
+            private static readonly byte[] zero = Encoding.ASCII.GetBytes("0");
+            public static Dictionary<int, byte[]> StatusCodeString = new Dictionary<int, byte[]>
             {
-                stream.Write(Encoding.ASCII.GetBytes("HTTP/1.1"));
-                stream.Write(Encoding.ASCII.GetBytes(StatusCodeString[StatusCode]));
-                stream.Write(crLf);
-
-                if (Headers != null)
-                {
-                    foreach (KeyValuePair<string, string> header in Headers)
-                    {
-                        stream.Write(Encoding.ASCII.GetBytes(header.Key));
-                        stream.Write(colonSpace);
-                        stream.Write(Encoding.ASCII.GetBytes(header.Value));
-                        stream.Write(crLf);
-                    }
-                }
-                stream.Write(crLf);
-            }
-
-            [Obsolete]
-            public byte[] HeadToByteArray()
-            {
-                StringBuilder sb = new StringBuilder();
-                sb.Append("HTTP/1.1 ");
-                sb.Append(StatusCodeString[StatusCode]);
-                sb.Append("\r\n");
-
-                if (Headers != null)
-                {
-                    foreach (KeyValuePair<string, string> header in Headers)
-                    {
-                        sb.Append(header.Key);
-                        sb.Append(": ");
-                        sb.Append(header.Value);
-                        sb.Append("\r\n");
-                    }
-                }
-                sb.Append("\r\n");
-
-                return Encoding.ASCII.GetBytes(sb.ToString()); //HTTP 头应该是 ASCII 编码
-            }
-
-            public static Dictionary<int, string> StatusCodeString = new Dictionary<int, string>
-            {
-                { 200, "200 OK" },
-                { 206, "206 Partial Content"},
-                { 301, "301 Moved Permanently" },
-                { 404, "404 Not Found" },
-                { 403, "403 Forbidden" },
-                { 500, "500 Internal Server Error" },
+                { 200, Encoding.ASCII.GetBytes("200 OK") },
+                { 206, Encoding.ASCII.GetBytes("206 Partial Content") },
+                { 301, Encoding.ASCII.GetBytes("301 Moved Permanently") },
+                { 404, Encoding.ASCII.GetBytes("404 Not Found") },
+                { 403, Encoding.ASCII.GetBytes("403 Forbidden") },
+                { 500, Encoding.ASCII.GetBytes("500 Internal Server Error") },
             };
+
+            private enum Stage
+            {
+                Status,
+                Headers,
+                Body,
+            }
+            private Stage stage = Stage.Status;
+
+            private Stream stream;
+            private bool useCompression;
+            private int status;
+
+            public ResponseStream(Stream stream, bool useCompression)
+            {
+                this.stream = stream;
+                this.useCompression = useCompression;
+            }
+
+            public void WriteStatus(int status)
+            {
+                if (stage == Stage.Status)
+                {
+                    this.status = status;
+                    stream.Write(http11);
+                    stream.Write(space);
+                    stream.Write(StatusCodeString[status]);
+                    stream.Write(crLf);
+                    stream.Flush();
+                    stage = Stage.Headers;
+                }
+            }
+
+            public void WriteHeader(string key, string value)
+            {
+                if (stage == Stage.Headers)
+                {
+                    WriteHeader(Encoding.ASCII.GetBytes(key), Encoding.ASCII.GetBytes(value));
+                }
+            }
+
+            public void WriteHeader(byte[] key, byte[] value)
+            {
+                stream.Write(key);
+                stream.Write(colonSpace);
+                stream.Write(value);
+                stream.Write(crLf);
+            }
+
+            public void WriteBody(ReadOnlyMemory<byte> body)
+            {
+                if (stage == Stage.Headers)
+                {
+                    WriteCommonHeaders();
+                    if (useCompression && status != 206)
+                    {
+                        WriteHeader(HeaderStrings.ContentEncoding, HeaderStrings.Gzip);
+                        //WriteHeader("Vary", "Accept-Encoding");
+                        using MemoryStream compressStream = new MemoryStream();
+                        using (GZipStream zipStream = new GZipStream(compressStream, CompressionMode.Compress))
+                        {
+                            zipStream.Write(body.Span);
+                        }
+                        body = compressStream.ToArray();
+                    }
+                    if (status != 206) WriteHeader(HeaderStrings.ContentLength, body.Length.ToString());
+
+                    stream.Write(crLf);
+                    stage = Stage.Body;
+                    stream.Write(body.Span);
+                }
+            }
+
+            public delegate IEnumerable<Memory<byte>> ChunkingProvider();
+
+            public void WriteBody(ChunkingProvider provider)
+            {
+                if (stage == Stage.Headers)
+                {
+                    WriteCommonHeaders();
+                    stage = Stage.Body;
+                    WriteHeader(HeaderStrings.TransferEncoding, HeaderStrings.Chunked);
+                    stream.Write(crLf);
+                    foreach (var chunk in provider())
+                    {
+                        stream.Write(Encoding.ASCII.GetBytes(chunk.Length.ToString("X")));
+                        stream.Write(crLf);
+                        stream.Write(chunk.Span);
+                        stream.Write(crLf);
+                        stream.Flush();
+                    }
+                    stream.Write(zero);
+                    stream.Write(crLf);
+                    stream.Write(crLf);
+                }
+            }
+
+            private void WriteCommonHeaders()
+            {
+                WriteHeader(HeaderStrings.Server, HeaderStrings.NWS);
+                WriteHeader(HeaderStrings.Date, Encoding.ASCII.GetBytes(DateTime.Now.ToUniversalTime().ToString("R")));
+            }
+
+            public void FinishSession()
+            {
+                switch (stage)
+                {
+                    case Stage.Headers:
+                        WriteCommonHeaders();
+                        break;
+                    default:
+                        break;
+                }
+                stage = Stage.Status;
+            }
         }
 
         public static Request ParseRequest(in string request) //奇技淫巧

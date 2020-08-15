@@ -45,7 +45,7 @@ namespace WebServer
             return (int)info.Length; //不是很安全，以后再改吧
         }
 
-        public ReadOnlyMemory<byte> ReadPartialFile(string filename, int begin, int end, out int fullLength)
+        public ReadOnlyMemory<byte> ReadPartialFile(string filename, int begin, ref int end, out int fullLength)
         {
             if (cache.ContainsKey(filename))
             {
@@ -56,12 +56,41 @@ namespace WebServer
             else
             {
                 fullLength = GetFileLength(filename);
-                var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+                using var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
                 stream.Seek(begin, SeekOrigin.Begin);
+                if (end >= fullLength) end = fullLength - 1;
                 var memory = new byte[end - begin + 1];
                 stream.Read(memory);
                 return memory;
             }
+        }
+
+        public HttpHelper.ResponseStream.ChunkingProvider
+            ReadPartialFileChunked(string filename, int begin, ref int end, out int fullLength)
+        {
+            fullLength = GetFileLength(filename);
+            if (end >= fullLength) end = fullLength - 1;
+            var endCopy = end;
+            IEnumerable<Memory<byte>> provider()
+            {
+                using var stream = new FileStream(filename, FileMode.Open, FileAccess.Read, FileShare.Read);
+                stream.Seek(begin, SeekOrigin.Begin);
+                var memory = new byte[1024 * 1024];
+                for (int i = begin; i < endCopy; i += 1024 * 1024)
+                {
+                    stream.Read(memory);
+                    if (i + 1024 * 1024 - 1 <= endCopy)
+                    {
+                        yield return memory;
+                    }
+                    else
+                    {
+                        yield return memory[..(endCopy - i + 1)];
+                    }
+                }
+                yield break;
+            }
+            return provider;
         }
 
         public byte[] ReadFile(string filename)

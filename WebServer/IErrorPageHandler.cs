@@ -5,14 +5,14 @@ namespace WebServer
 {
     internal interface IErrorPageHandler
     {
-        public HttpHelper.Response GetPage(WebException exception);
+        public void WritePage(WebException exception, HttpHelper.ResponseStream stream);
     }
 
     internal class WebException : Exception
     {
         public int ErrorCode { get; }
         public WebException(int errorCode, Exception inner = null)
-            : base(HttpHelper.Response.StatusCodeString[errorCode], inner)
+            : base(errorCode.ToString(), inner)
         {
             ErrorCode = errorCode;
         }

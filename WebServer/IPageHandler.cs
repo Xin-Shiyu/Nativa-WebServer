@@ -2,8 +2,8 @@
 {
     internal interface IPageHandler
     {
-        public HttpHelper.Response GetPage(string URI);
-        public HttpHelper.Response GetPage(string URI, int begin, int end);
-        public HttpHelper.Response GetHead(string URI);
+        public void WritePage(string URI, in HttpHelper.ResponseStream stream);
+        public void WritePage(string URI, int begin, int end, in HttpHelper.ResponseStream stream);
+        public void WriteHead(string URI, HttpHelper.ResponseStream stream);
     }
 }
